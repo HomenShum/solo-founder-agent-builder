@@ -55,9 +55,28 @@ splits and in-app transfer mean a score *can't* be faked.
 Cross-vendor **SKILL.md** — works under any coding agent. Install the nodes you need; the master
 orchestrates the proving loop. Shipped on SkillHunt; **reupload-to-upgrade** as each node deepens.
 
+## Use it with your coding agent
+
+Solo Founder Nodes is portable **SKILL.md** — it works with any coding agent (Claude Code, Codex,
+OpenClaw, Hermes, Trae, …). Paste this into your agent, **inside your own project**:
+
+> Fetch the Solo Founder Nodes skills from https://github.com/HomenShum/solo-founder-nodes (clone it,
+> or read the raw files). Then act as the master directive in `skills/solo-founder-nodes/SKILL.md` →
+> `MASTER_SKILL.md`: run benchmark-driven development on THIS project — discover what my agent should
+> do, recommend a benchmark, set it up, build the missing agent + UI, wire the adapter, iterate, and
+> verify it in my live app UI — reading each phase's playbook in `skills/solo-founder-nodes/nodes/`.
+> Obey the non-negotiables: held-out (never tune on what you score), no answer-keys, in-app transfer
+> (a score counts only if it reproduces in my real UI), honest provenance (report the real number).
+> Gate any install / spend / code change on my approval, and log each phase: what you did, the result,
+> and what you COULD NOT do.
+
+**Claude Code:** copy `skills/solo-founder-nodes/`, `skills/cited-sources/`, `skills/powerpoint/` into
+your project's `.claude/skills/` — it auto-loads `SKILL.md`. **Other agents:** point them at the
+GitHub files and have them follow `SKILL.md` → `MASTER_SKILL.md` as the playbook.
+
 
 ## Repo layout
-- `skills/solo-founder-nodes/` — the master directive (`SKILL.md`) + the 7 phase playbooks in `nodes/` + `references/`.
+- `skills/solo-founder-nodes/` — `SKILL.md` (loader entry) + `MASTER_SKILL.md` (full directive) + 7 phase playbooks in `nodes/` + `references/`.
 - `skills/cited-sources/`, `skills/powerpoint/` — standalone honesty primitives.
 - `docs/eval/nonbtb/` — runnable deterministic example grader; `docs/eval/BTB_GENERALIZATION_DIAGNOSTIC.md` — the anti-overfit protocol.
 
