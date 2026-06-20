@@ -1,8 +1,3 @@
----
-name: adapter
-description: >-
-  Phase 5 of the Solo Founder Nodes suite, invoked by the Solo Founder Nodes master directive: build the adaptation layer that wires the app's REAL agent into the benchmark harness so it (not a stand-in) runs the tasks. Use when the master directive reaches "wire my agent to the harness", "build the harbor adapter", "make my agent runnable by the benchmark", or when a prior phase has selected a benchmark + harness and you now need the agent-side glue. Enforces that the adapter routes through the live agent and carries no per-task answer-keys, plus a materializers-OFF switch to measure the true general agent.
----
 # Solo Founder Nodes — Adapter (wire the REAL agent to the harness)
 
 ## What this phase does

@@ -1,12 +1,3 @@
----
-name: benchmark
-description: >-
-  Phase 2 of the Solo Founder Nodes suite — invoked by the Solo Founder Nodes master directive after `discover` produces
-  capability-spec.md. Picks the benchmark(s) whose DELIVERABLE SHAPE matches the app's output (spreadsheet→spreadsheet,
-  web UI→browser, code→SWE) and authors the rubric — what "good" means (correctness, formula-vs-hardcode,
-  citation-resolves, no-fabrication) plus the held-out + generalization split. Triggers: "which benchmark fits my agent",
-  "pick a benchmark", "define the rubric", "what should I score against". Light, no gate. Produces benchmark-choice.md.
----
 # Solo Founder Nodes Phase 2 — Recommend the benchmark + author the rubric
 
 ## What this phase does

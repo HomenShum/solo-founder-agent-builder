@@ -57,8 +57,8 @@ orchestrates the proving loop. Shipped on SkillHunt; **reupload-to-upgrade** as 
 
 
 ## Repo layout
-- `skills/` — the `solo-founder-nodes` master + 7 nodes, plus the `cited-sources` and `powerpoint` primitives. Copy a skill dir into your project's `.claude/skills/`, or upload to SkillHunt.
-- `docs/eval/nonbtb/` — a runnable, deterministic example eval (the off-distribution generalization tripwire) + `grade.py`.
-- `docs/eval/BTB_GENERALIZATION_DIAGNOSTIC.md` — the anti-overfit measurement protocol.
+- `skills/solo-founder-nodes/` — the master directive (`SKILL.md`) + the 7 phase playbooks in `nodes/` + `references/`.
+- `skills/cited-sources/`, `skills/powerpoint/` — standalone honesty primitives.
+- `docs/eval/nonbtb/` — runnable deterministic example grader; `docs/eval/BTB_GENERALIZATION_DIAGNOSTIC.md` — the anti-overfit protocol.
 
-Distilled from **NodeRoom** (the origin); the heavy worked-example harness adapter lives there, referenced but not shipped here.
+Distilled from **NodeRoom** (the origin).

@@ -1,8 +1,3 @@
----
-name: iterate
-description: >-
-  Invoked by the Solo Founder Nodes master directive for PHASE 6+7 (run + fix). Use after a benchmark adapter exists and you can execute tasks: run the suite across TUNED, HELD-OUT, and GENERALIZATION slices, score with a deterministic no-LLM grader, classify failures, fix the smallest SHARED component (never a per-task writer), and re-measure held-out + generalization — keeping only fixes that lift the held-out and off-distribution slices. Triggers: "run the benchmark loop", "score my agent across slices", "fix the failures without cheating", "re-measure held-out", "emit the solo-founder-nodes scorecard".
----
 # Solo Founder Nodes Loop — Run, Score, Fix, Re-measure
 
 ## What this phase does

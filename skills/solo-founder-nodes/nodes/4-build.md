@@ -1,8 +1,3 @@
----
-name: build
-description: >-
-  Invoked by the Solo Founder Nodes master directive for PHASE 4 (per-stack, gated). Builds the missing pieces an agent app actually needs: the agent harness itself (tools, model routing, loop) AND the UI/UX surfaces that let the real app DO the benchmark task and show its work on screen. Use after a benchmark is chosen and the gap is mapped, when the user says "build the agent layer", "wire the agent into my app", "add the UI so the task runs in the real UI", or "scaffold the harness for my stack". Per-stack templates (Convex/React, Next.js, Streamlit); not a universal generator. Mutating the codebase is gated — propose a diff and get approval first.
----
 # build — Build the agent and the UI it needs
 
 ## What this phase does

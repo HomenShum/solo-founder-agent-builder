@@ -1,8 +1,3 @@
----
-name: discover
-description: >-
-  Phase 1 of the Solo Founder Nodes suite — invoked by the Solo Founder Nodes master directive to open benchmark-driven agent development. The coding agent deep-reads the user's prototype/idea/half-built/full app (codebase, live UI, any existing agent harness) and web-searches the domain, then writes capability-spec.md: what the agent should DO, the real deliverables it must produce, who the end-users are, and every assumption made where the user deferred. Triggers when the user says "figure out what my agent should actually do", "spec my agent's capabilities", "start solo-founder-nodes", or is handed off from the master directive. Light, no gate — read-only discovery.
----
 # Solo Founder Nodes Phase 1 — Discover (capability spec)
 
 ## What this phase does

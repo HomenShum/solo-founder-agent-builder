@@ -1,8 +1,3 @@
----
-name: verify
-description: >-
-  Phase 8 of the Solo Founder Nodes master directive: prove TRANSFER. Invoked after a task scores well in the offline harness, this subskill re-runs that exact task through the LIVE app UI and uses the browser (DOM signal + screenshot) to confirm the app produces the same correct, cited result. Triggers: "verify the agent in-app", "does the harness score reproduce in production", "prove transfer", "in-app verification", "did my benchmark win actually ship". A harness score that does not reproduce in-app does not count — this phase issues the final verdict: real capability vs overfitting.
----
 # Solo Founder Nodes — Phase 8: In-App Transfer Verification
 
 ## What this phase does

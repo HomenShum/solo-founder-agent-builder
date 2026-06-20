@@ -1,8 +1,3 @@
----
-name: setup
-description: >-
-  Phase 3 of the Solo Founder Nodes suite — invoked by the Solo Founder Nodes master directive once a benchmark is chosen, to stand up the eval environment (Docker, the Harbor-style runner, the HuggingFace dataset, and the verifier such as an LLM judge). Use when the user says "set up the benchmark environment", "install the eval harness", "get BankerToolBench / SpreadsheetBench / SWE-bench running on my disk", or the master directive hands off after benchmark selection. This is a HEAVY, hard-gated phase: nothing installs, downloads, or spends without explicit approval; the agent presents download + API-key links and exact commands, dry-runs first, and pins all caches to a chosen disk.
----
 # setup — Stand Up the Eval Environment (Phase 3)
 
 ## What this phase does
