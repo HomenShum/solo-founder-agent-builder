@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/HomenShum/solo-founder-nodes/templates/memory/solo-memory.schema.json",
+  "title": "SoloMemoryEvent",
+  "description": "One audit-safe memory event for the Solo Founder Nodes loop. Remember decisions, constraints, proofs, and preferences — never benchmark answers. Held-out task contents must never be persisted: use benchmarkSafety='heldout_forbidden' (which the writer rejects) or store only split hashes, aggregate scores, and failure classes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["projectId", "phase", "kind", "summary"],
+  "properties": {
+    "eventId": { "type": "string", "description": "Stable id, e.g. mem_<nanoid>." },
+    "projectId": { "type": "string", "description": "The app/repo this memory belongs to." },
+    "userId": { "type": "string", "description": "Optional founder id for L3 cross-project preferences." },
+    "phase": {
+      "type": "string",
+      "enum": ["discover", "benchmark", "setup", "build", "adapter", "iterate", "verify", "runtime", "design", "coach"]
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "decision", "assumption", "approval", "rejection", "command", "env_fact",
+        "benchmark_choice", "split_policy", "run_result", "failure_cluster",
+        "fix_attempt", "in_app_transfer", "design_constraint", "architecture_rule",
+        "user_preference", "project_fact", "tool_result"
+      ]
+    },
+    "summary": { "type": "string", "minLength": 1, "description": "One line; this is what recall ranks on." },
+    "content": { "type": "string", "default": "", "description": "Expanded detail. Never put held-out task prompts/answers here." },
+    "tags": { "type": "array", "items": { "type": "string" }, "default": [] },
+    "importance": { "type": "number", "minimum": 0, "maximum": 1, "default": 0.5 },
+    "visibility": {
+      "type": "string",
+      "enum": ["local", "project", "private_user", "public_safe"],
+      "default": "project"
+    },
+    "benchmarkSafety": {
+      "type": "string",
+      "enum": ["safe", "tuned_only", "aggregate_only", "heldout_forbidden", "redacted"],
+      "default": "safe",
+      "description": "safe=persist+search; tuned_only=persist but never reason about held-out contents; aggregate_only=metrics/failure-classes/split-hashes only (requires metadata.aggregateOnly=true); heldout_forbidden=REJECT the write; redacted=local only, never sync to a cloud adapter."
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "ref"],
+        "properties": {
+          "type": { "type": "string", "enum": ["file", "url", "command", "screenshot", "dom_signal", "run", "trace", "okf"] },
+          "ref": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      },
+      "default": []
+    },
+    "metadata": { "type": "object", "default": {} },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}

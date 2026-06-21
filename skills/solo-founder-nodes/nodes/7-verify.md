@@ -17,6 +17,7 @@ Outputs:
 - The final verdict line: REAL CAPABILITY (transfers) vs OVERFIT (scored offline, fails in-app), with the non-transferring task ids enumerated.
 
 ## Procedure (agent-driven; human steers by comment)
+0. **Load safe project memory (QUARANTINED read).** Pull from memory ([`../references/memory.md`](../references/memory.md), L2): the prior scorecard pointers, the held-out + off-distribution slice MEMBERSHIP (so the sample spans BOTH, not just easy tuned tasks), the live target (local dev / dev Convex / prod URL), the testid/DOM signal that encodes the answer, and any user-pinned task ids from prior sessions. Read split membership + scores only — never let held-out task ANSWERS leak from memory into the in-app run; the app must compute them live.
 1. Pull the Phase 7 provenance records. Select the verification sample: take a fixed N from the held-out split AND at least a few from the off-distribution generalization slice. HUMAN COMMENT POINT: the user can pin specific task ids ("// verify the 3 that scored highest + the 2 hardest") or accept the agent's sample.
 2. Bring up the live surface. Prefer the same target the user will demo on. Follow the live-DOM discipline: do NOT trust build/CLI/CI-green — fetch the actual rendered surface and confirm it is live before driving it (watch for Suspense/SSR blank shells and CDN-stale HTML).
 3. For each sampled task: drive the real UI — open the app, enter the literal task prompt into the real composer, trigger the agent the way a user would (no harness shims, no injected fixtures, no per-task code path).
@@ -24,6 +25,7 @@ Outputs:
 5. Compare to the harness result. Mark `match` only if the in-app answer AND its citation match what the harness scored. A correct answer with a missing/different citation is a PARTIAL — flag it, do not pass it.
 6. Write the transfer ledger and the verdict. Enumerate every non-transferring task id and the divergence class (wrong answer / missing citation / runtime error / blank shell / different code path).
 7. HUMAN COMMENT POINT: if transfer fails, the user steers the next move by comment — loop back to Phase 7 (the harness was measuring something the app does not do), or back to the app wiring (the capability exists but the UI path is broken). Do NOT silently re-tune to make the number look good.
+8. **Write the in-app transfer proof to memory.** Persist to memory ([`../references/memory.md`](../references/memory.md), L2, kind `in_app_transfer`): per verified task the DOM signal, the screenshot path, the recorded run id, and the binary verdict; the suite-level REAL CAPABILITY vs OVERFIT line; and the enumerated non-transferring task ids + divergence class. Store split membership + the proof refs (screenshot/dom_signal/trace) only — NOT held-out task answers (quarantine). This closes the suite's memory loop so a future re-tune or app-wiring fix targets the non-transferring ids without re-running everything.
 
 ## Honesty guardrail (the slice that applies here)
 - IN-APP TRANSFER (primary): a score only counts when the same task through the real app UI gives the same result, browser-verified. Driving a hidden harness code path and calling it "in-app" is the cheat this phase exists to catch — the prompt must go through the real composer and the answer must come out of the real rendered surface.
@@ -31,6 +33,15 @@ Outputs:
 - NO ANSWER-KEYS: confirm the in-app path contains no per-task detector or hardcoded output that the harness lacked (or vice-versa). If the app only works for the tuned task ids, that is overfit — fail it.
 - HELD-OUT: the verification sample must include held-out and off-distribution tasks, not only the tasks tuning optimized. Reporting transfer on tuned tasks alone is not transfer.
 - Never claim "verified in-app" on the basis of build success, `git push`, CLI exit codes, or CI-green. Live rendered DOM signal + screenshot, or it did not transfer.
+
+## Design Bridge (subroutine — only when the task needs UI parity)
+If the verified task requires the rendered surface to MATCH a design (not just produce a correct value), run the Design Bridge verification before declaring transfer. This is the verify-side mirror of the build-phase Bridge: build constructs the surface, verify proves the surface renders the proof to spec. Full subroutine: [`../references/design-bridge.md`](../references/design-bridge.md).
+- **Screenshot** the rendered surface (Claude Preview / Playwright; remember the hidden-tab `document.hidden=true` gotcha — verify via click + `preview_eval` + `getComputedStyle`, not passive screenshots).
+- **DOM** — assert the concrete content signal (testid / expected cell value / citation string) is in the live rendered DOM, not just the network response.
+- **Interaction** — drive the real interaction path (composer → trigger → result, evidence click-through to the source cell) the way a user would; no shims.
+- **Mobile breakpoint** — confirm the surface holds at the mobile viewport, not only desktop.
+- **Design-token usage** — confirm the surface uses the app's design tokens (no one-off CSS drift); compare against the design-system reference.
+Order guardrail: the proof (correct cited answer) comes FIRST; design parity is verified SECOND. A pretty surface that shows the wrong answer still FAILS transfer.
 
 ## Gate
 Verification itself is read-mostly (drive UI, capture evidence) and needs no approval. The GATE applies only if a sampled task would SPEND (paid model calls on the live deployment) or MUTATE shared state (writing artifacts into a shared/prod Convex room). In that case: GUIDE -> GENERATE -> GATE — present the task list, the exact run commands, the estimated spend / the rows that will be written, and the live target; dry-run against the dev deployment first if possible; get explicit approval before driving the paid/shared run. Prefer the dev Convex deployment and a throwaway room to avoid the gate entirely.

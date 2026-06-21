@@ -59,7 +59,7 @@ infra weight (heavy = Docker/Harbor/HF/verifier → guide → generate → gate 
 ## Reuse
 - **Registry + choose-rubric:** `.claude/skills/solo-founder-nodes/references/benchmarks.md` (shape-first matching, infra-weight table,
   honesty note). Treat it as a starter — supplement with live web search.
-- **Master directive:** `.claude/skills/solo-founder-nodes/SKILL.md` (the 8-phase loop, the four non-negotiables, the gate policy).
+- **Master directive:** `.claude/skills/solo-founder-nodes/SKILL.md` (the 7-phase loop, the four non-negotiables, the gate policy).
 - **Upstream artifact:** `capability-spec.md` from `discover` (Phase 1).
 - **Dogfooded worked example — NodeRoom + BankerToolBench:** NodeRoom's agent produces analyst documents (xlsx/pptx/docx)
   and cited chat answers, so the deliverable-shape match is **BankerToolBench** (`docs/eval/bankertoolbench-official-contract.json`,
