@@ -24,5 +24,3 @@ playbook in [`nodes/`](nodes/) (`1-discover.md` … `7-verify.md`) when you ente
 > Claude Code, Codex, OpenClaw, Hermes, Trae, …). `MASTER_SKILL.md` holds the full master directive.
 
 Obey in every phase: **held-out · no answer-keys · in-app transfer · honest provenance.** Gate any
-install / spend / code change on the user's approval. Standalone primitives in the suite (separate
-skills): `cited-sources`, `powerpoint`.

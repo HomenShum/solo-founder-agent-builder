@@ -44,10 +44,5 @@ make it real. Phases 6-7 are the loop you repeat.
 A **Parity scorecard** — tuned / held-out / generalization, each with its honesty state — plus the
 **in-app transfer proof** (browser evidence) and a one-line verdict: **real capability or overfitting.**
 
-## The rest of the suite (separate, standalone skills)
-Honesty *primitives* — usable on their own, not phases of this loop:
-- **`cited-sources`** — prove a claim by boxing the exact source line; refuses if the quote is not there.
-- **`powerpoint`** — turn notes into a deck where every claim is `verified` / `manual` / `needs_review`.
-
 Reuse: a deterministic, no-LLM grader and a worked example live at `docs/eval/nonbtb/` and
 `docs/eval/BTB_GENERALIZATION_DIAGNOSTIC.md` (repo root; distilled from NodeRoom, the origin).

@@ -1,9 +1,0 @@
-{
-  "title": "Bad deck — fabrication fixture (should FAIL the gate)",
-  "slides": [
-    { "layout": "content", "title": "Traction", "bullets": [
-      { "text": "$4.2M ARR, up 300% YoY", "status": "verified", "source": "" },
-      { "text": "Closing a $20M Series B next month", "status": "verified", "source": "[TK: confirm with Maya]" }
-    ]}
-  ]
-}
