@@ -112,3 +112,7 @@ The loop is only as honest as its *most adversarial* audit — so **red-teaming 
 is a required, recurring phase**, not a one-time review. The builder *will* overclaim enforcement
 that isn't there (this skill's own first substrate did); only an adversary reading the actual data
 flow catches it. Derive, don't accept — then have someone try to beat what you derived.
+
+**Grounding:** the recent eval-integrity literature corroborating this doctrine — contamination,
+reward hacking, eval-awareness, dynamic benchmarks, verifiable evaluation — is mapped to T1–T6 and
+the S9–S16 mechanisms in [`research.md`](research.md).
