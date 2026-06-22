@@ -1,10 +1,16 @@
-# Autonomous benchmark runner (in the skill — reproducible, full-auto)
+# Autonomous benchmark runner — REFERENCE ADAPTER (shape only)
 
-This is the loop's **iterate/verify** phase as runnable code: the agent runs the whole benchmark on
-the founder's behalf — clone the benchmark from the autonomy allowlist → **seal a held-out slice** →
-attempt each held-out task with the **model in the loop** → grade with the **benchmark's OWN grader**
-→ write an **honest headline**. The harness contains no per-task answers; a row counts only as a clean
-held-out probe. Mirrors `references/autonomy.md` + `references/honest-lane.md`.
+**This is not "what the skill does."** The skill is end-to-end for **your app**: it discovers what
+your app does, then **picks or builds the right test for *that* app**. SpreadsheetBench is one
+adapter — useful only if your app is spreadsheet-shaped. For any other app the agent should write a
+sibling adapter (in-app real-task set, BankerToolBench, SWE-bench, your own held-out set, …) using
+this file's *shape*.
+
+What the shape is — the loop's **iterate/verify** phase as runnable code: clone the benchmark from
+the autonomy allowlist → **seal a held-out slice** → attempt each held-out task with the **model in
+the loop** → grade with the **benchmark's OWN grader** (or your own deterministic grader for an
+in-app eval set) → write an **honest headline**. The harness contains no per-task answers; a row
+counts only as a clean held-out probe. Mirrors `references/autonomy.md` + `references/honest-lane.md`.
 
 ## Reference adapter: SpreadsheetBench (`spreadsheetbench.py`)
 Wraps the real benchmark faithfully — it imports SpreadsheetBench's official `evaluation.compare_workbooks`
