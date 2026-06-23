@@ -22,7 +22,9 @@ import {
   designSkillRegistry,
   designSurfaceKinds,
   designTargetPlatforms,
+  makeDesignFullFlow,
   recommendDesignSkills,
+  verifyDesignFullFlow,
   verifyDesignSkillPlan,
   type DesignAgentRuntime,
   type DesignStylePreset,
@@ -128,6 +130,7 @@ const HELP = `sfn — Solo Founder Nodes local CLI   (run via: npm run sfn -- <c
   compare top3d [--out <file>]  print/write the 3D provider comparison rubric
   design registry [--out <file>]
   design recommend --surface <kind> [--stack <s>] [--runtime <r>] [--style <preset>] [--platform <p>] [--animation] [--visuals] [--mobile] [--shadcn] [--shadcn-mcp] [--out <file>]
+  design flow --surface <kind> [--category <c>] [--stack <s>] [--runtime <r>] [--style <preset>] [--platform <p>] [--animation] [--visuals] [--mobile] [--shadcn] [--shadcn-mcp] [--out <file>]
   gstack registry [--out <file>]
   gstack recommend --phase <p> --goal <g> [--surface <s>] [--risk low|medium|high] [--ui] [--deploy] [--security] [--devex] [--docs] [--perf] [--mobile] [--out <file>]
   seal --salt <s> <id...>     seal a held-out manifest (HMAC) — keep the salt OUT of the agent's reach
@@ -397,7 +400,31 @@ async function main() {
         console.log(JSON.stringify(out ? { out: resolve(out), ...payload } : payload, jbig, 2));
         process.exit(verdict.ok ? 0 : 1);
       }
-      console.error("design: registry | recommend");
+      if (sub === "flow") {
+        const surfaceKind = parseSurfaceKind(flag(rest, "--surface", "saas-app"));
+        const runtime = parseDesignRuntime(flag(rest, "--runtime", "generic-agent"));
+        const targetPlatform = parseTargetPlatform(flag(rest, "--platform", "web"));
+        const plan = makeDesignFullFlow({
+          surfaceKind,
+          runtime,
+          stack: flag(rest, "--stack", ""),
+          productCategory: flag(rest, "--category"),
+          needsAnimation: rest.includes("--animation"),
+          needsVisualContent: rest.includes("--visuals"),
+          needsMobileNative: rest.includes("--mobile"),
+          usesShadcn: rest.includes("--shadcn"),
+          usesShadcnMcp: rest.includes("--shadcn-mcp"),
+          stylePreset: parseStylePreset(flag(rest, "--style")),
+          targetPlatform,
+        });
+        const verdict = verifyDesignFullFlow(plan);
+        const payload = { plan, verdict };
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), payload);
+        console.log(JSON.stringify(out ? { out: resolve(out), ...payload } : payload, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      console.error("design: registry | recommend | flow");
       process.exit(2);
     }
     case "gstack": {

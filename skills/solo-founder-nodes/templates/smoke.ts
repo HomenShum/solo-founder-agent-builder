@@ -11,7 +11,7 @@ import { sha256 } from "./ledger/hash";
 import { inspectGraphContext, graphQueryPlan } from "./context/graphContext";
 import { SoloControlPlane } from "./control/controlPlane";
 import { make3dAgentResearchPack, top3dComparisonRubric, verifyResearchPack, type ResearchPack } from "./research/researchSpine";
-import { designSkillRegistry, recommendDesignSkills, verifyDesignSkillPlan } from "./design/designSkillBridge";
+import { designSkillRegistry, makeDesignFullFlow, recommendDesignSkills, verifyDesignFullFlow, verifyDesignSkillPlan, type DesignFullFlowPlan } from "./design/designSkillBridge";
 import { gstackRoleRegistry, recommendGstackLanes, verifyGstackPlan, type GstackReviewPlan } from "./gstack/gstackBridge";
 
 let pass = 0;
@@ -201,7 +201,7 @@ async function main() {
   const designRegistry = designSkillRegistry();
   check("design registry has portable sources", designRegistry.length >= 12 && designRegistry.every((s) => s.agentLocked === false));
   check("design registry includes Codex-compatible skills", designRegistry.some((s) => s.runtimeSupport.includes("codex") && s.id === "frontend-design"));
-  check("design registry includes visual/taste/native lanes", ["taste-minimalist-ui", "taste-industrial-brutalist-ui", "premium-frontend-ui", "higgsfield-skills", "swiftui-skills"].every((id) => designRegistry.some((s) => s.id === id)));
+  check("design registry includes visual/taste/native lanes", ["taste-minimalist-ui", "taste-industrial-brutalist-ui", "frontend-ui-ux", "premium-frontend-ui", "higgsfield-skills", "swiftui-skills"].every((id) => designRegistry.some((s) => s.id === id)));
   const dashboardPlan = recommendDesignSkills({
     surfaceKind: "dashboard",
     stack: "Next.js shadcn Tailwind",
@@ -231,6 +231,40 @@ async function main() {
   const badDesignPlan = { ...dashboardPlan, sequence: ["implementation", "design-brief", "browser-verify"] };
   const badDesignVerdict = verifyDesignSkillPlan(badDesignPlan);
   check("design order violation is rejected", badDesignVerdict.ok === false && badDesignVerdict.errors.some((e) => e.includes("before implementation")));
+  const full3dDesignFlow = makeDesignFullFlow({
+    surfaceKind: "3d-app",
+    stack: "Next.js shadcn Three.js hero image",
+    runtime: "codex",
+    productCategory: "3D asset generation",
+    stylePreset: "premium",
+    needsAnimation: true,
+    needsVisualContent: true,
+    usesShadcnMcp: true,
+  });
+  const full3dDesignVerdict = verifyDesignFullFlow(full3dDesignFlow);
+  check("full transcript design flow selects direction/component/industry/motion/visual/proof stages", ["surface-classification", "break-default-direction", "component-registry", "industry-fit-engine", "motion-plan", "visual-content", "implementation-proof"].every((id) => full3dDesignFlow.sequence.includes(id)));
+  check("full transcript design flow verifies for 3D app", full3dDesignVerdict.ok, full3dDesignVerdict.errors.join("; "));
+  const fullDashboardFlow = makeDesignFullFlow({
+    surfaceKind: "dashboard",
+    stack: "Next.js shadcn Tailwind",
+    runtime: "codex",
+    productCategory: "analytics",
+    usesShadcnMcp: true,
+  });
+  check("dashboard full flow includes dashboard arrangement + industry fit", fullDashboardFlow.selectedSkillIds.includes("dashboard-arrangement") && fullDashboardFlow.sequence.includes("dashboard-information-architecture") && fullDashboardFlow.sequence.includes("industry-fit-engine"));
+  const fullMobileFlow = makeDesignFullFlow({
+    surfaceKind: "mobile-app",
+    stack: "Expo SwiftUI React Native",
+    runtime: "codex",
+    targetPlatform: "ios",
+    needsMobileNative: true,
+  });
+  const fullMobileVerdict = verifyDesignFullFlow(fullMobileFlow);
+  check("mobile full flow treats mobile as native, not small web", fullMobileFlow.sequence.includes("mobile-native-rules") && fullMobileFlow.selectedSkillIds.includes("mobile-app-ui-design") && fullMobileFlow.selectedSkillIds.includes("swiftui-skills"));
+  check("mobile full flow verifies", fullMobileVerdict.ok, fullMobileVerdict.errors.join("; "));
+  const badFullFlow: DesignFullFlowPlan = { ...full3dDesignFlow, sequence: full3dDesignFlow.sequence.filter((id) => id !== "surface-classification") };
+  const badFullFlowVerdict = verifyDesignFullFlow(badFullFlow);
+  check("full design flow without surface classification is rejected", badFullFlowVerdict.ok === false && badFullFlowVerdict.errors.some((e) => e.includes("surface-classification")));
 
   // ---------------- gstack bridge: portable operating-review lanes ----------------
   console.log("\ngstackBridge (portable CEO/eng/design/QA/release roles):");

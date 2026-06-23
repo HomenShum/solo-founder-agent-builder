@@ -90,10 +90,16 @@ The design bridge is now agent-agnostic:
 - `npm run sfn -- design recommend --surface dashboard --stack "Next.js shadcn" --runtime codex`
 - `npm run sfn -- design recommend --surface marketing-site --style premium --visuals --animation --runtime codex`
 - `npm run sfn -- design recommend --surface mobile-app --platform ios --stack SwiftUI --runtime codex`
+- `npm run sfn -- design flow --surface 3d-app --category "3D asset generation" --style premium --visuals --animation --shadcn-mcp --runtime codex`
+- `npm run sfn -- design flow --surface dashboard --category analytics --stack "Next.js shadcn" --shadcn-mcp --runtime codex`
 
 Claude-labeled skills can still be useful, but only as portable markdown/tooling references. The loop
 copies their concrete design decisions into `design-brief.md` and `component-contract.md`; implementation
-can run under Codex, Claude Code, Cursor, Windsurf, Copilot, or a generic coding agent.
+can run under Codex, Claude Code, Cursor, Windsurf, Copilot, or a generic coding agent. Use
+`design flow` when you want the full transcript sequence: classify the surface, break generic defaults,
+use component registries where appropriate, arrange dashboard information, run industry-fit palette/font
+selection, choose one taste preset, add GSAP/Higgsfield/mobile lanes only when needed, and verify in the
+real UI.
 
 ## Portable gstack operating lanes
 The loop also integrates `garrytan/gstack` as a portable specialist-review model:

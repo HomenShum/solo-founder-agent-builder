@@ -107,13 +107,17 @@ visual-regression-checklist).
 
 **Design skills are portable inputs, not Claude Code lock-in.** Before calling any design MCP or
 writing UI code, select the relevant design guidance with `npm run sfn -- design recommend ...`
+for a short plan or `npm run sfn -- design flow ...` for the full transcript flow
 ([`templates/design/designSkillBridge.ts`](templates/design/designSkillBridge.ts)). Claude-origin
 frontend skills, shadcn skills, GSAP skills, UI UX Pro Max, Expo, Material 3, and design registries
 are consumed as markdown/tooling references that Codex, Claude Code, Cursor, Windsurf, Copilot, or a
 generic coding agent can apply. Do not require a Claude-only slash command or plugin to implement the
 surface; port the design decisions into the Design Brief and Component Contract.
-Select exactly the needed lanes: one style preset when useful (`minimalist`, `industrial-brutalist`,
-or `premium`), `--visuals` only when generated image/video assets are part of the product, and
+The full flow must classify the surface before code: marketing/portfolio uses break-default direction;
+functional products use component systems + industry-fit design intelligence; dashboards require
+information architecture; mobile is not small web. Select exactly the needed lanes: one style preset
+when useful (`minimalist`, `industrial-brutalist`, `all-rounder`, or `premium`), `--visuals` only when
+generated image/video assets are part of the product, and
 `--platform ios|android|cross-platform` only when the surface is actually mobile/native. Generated
 media, shadcn MCP registry pulls, and native mobile guidance still require browser/device proof.
 

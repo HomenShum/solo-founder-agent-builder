@@ -23,6 +23,7 @@ npm run sfn -- control start --project <p> --goal <g> --budget 5 --root <app-roo
 npm run sfn -- control status <loopId>      # resume summary: phase, approvals, traces, improvements
 npm run sfn -- research init --goal <g> --domain 3d-generation
 npm run sfn -- design recommend --surface saas-app --runtime codex
+npm run sfn -- design flow --surface 3d-app --category "3D asset generation" --visuals --animation --runtime codex
 npm run sfn -- gstack recommend --phase verify --goal <g> --ui --deploy --security
 npm run sfn -- seal --salt <s> <taskId...>  # seal a held-out manifest (HMAC) — keep the salt OUT of the agent's reach
 npm run sfn -- ledger list                  # list recorded eval runs

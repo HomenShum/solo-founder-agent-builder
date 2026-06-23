@@ -63,9 +63,10 @@ templates in [`templates/research/`](templates/research/).
 
 **Design skills:** design guidance is not Claude Code locked. Use
 [`templates/design/designSkillBridge.ts`](templates/design/designSkillBridge.ts) or
-`npm run sfn -- design recommend ...` to select portable direction/component/dashboard/animation/mobile
-skills, then copy the decisions into the Design Brief and Component Contract for whichever coding agent
-is running.
+`npm run sfn -- design recommend ...` for short selection or `npm run sfn -- design flow ...` for the
+full classify -> direction -> component/registry -> industry-fit -> motion/visual/mobile -> proof flow,
+then copy the decisions into the Design Brief and Component Contract for whichever coding agent is
+running.
 
 **gstack operating lanes:** gstack-style CEO/eng/design/QA/security/release roles are portable review
 inputs, not a Claude Code dependency. Use
