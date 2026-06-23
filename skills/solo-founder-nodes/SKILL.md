@@ -45,3 +45,5 @@ result, and what you could not do.
 decisions, approvals, rejected fixes) and at END write decision/provenance memory — but **never** write
 held-out task contents (store split hashes + aggregate scores only). Substrate + contract:
 [`references/memory.md`](references/memory.md); templates in [`templates/memory/`](templates/memory/).
+
+When running the harness directly, see [`templates/run/README.md`](templates/run/README.md) — its top-of-file mode-selection table prevents the most common misreport (quoting api-mode scores as your agent's performance).

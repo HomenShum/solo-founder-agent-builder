@@ -49,6 +49,8 @@ get explicit approval **before** executing.
 Discover + benchmark define *what good is*; setup + build + adapter make it runnable; iterate + verify
 make it real. Phases 6-7 are the loop you repeat.
 
+When running the harness directly, see [`templates/run/README.md`](templates/run/README.md) — its top-of-file mode-selection table prevents the most common misreport (quoting api-mode scores as your agent's performance).
+
 ## Design Bridge (subroutine — invoked by build + verify)
 Not a phase — a subroutine **build** (phase 4) and **verify** (phase 7) call when a UI gap is
 architectural/visual and a design tool (Figma MCP, Codex "Implement designs") is connected. **Order is

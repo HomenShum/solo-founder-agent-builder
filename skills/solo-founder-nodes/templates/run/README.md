@@ -77,6 +77,62 @@ A 2-task held-out demo (agent-in-the-loop, sample_data_200, official grader):
 - `99-24` (sheet-level): **hard=0** — honestly failed (value-fill can't reconstruct multi-sheet filters).
 - **Headline: hard@all = 0.5, n=2.** Low n, honest number.
 
+## Cold-start gotchas (R36 cold-start findings)
+
+These are the friction points the R36 cold-start suite surfaced. Each is now either fixed in the runner or documented here so the next cold-start does not hit them.
+
+### Reasoning-model gotcha (`--mode code-exec` / `--mode tool-loop`)
+
+Reasoning-tuned slugs on OpenRouter — `z-ai/glm-5.2`, most `deepseek/*` thinker variants, `qwen3/*-thinking` — frequently return `choices[0].message.content == None` while spending all tokens in `.reasoning` / `.reasoning_content`. The OLD runner read `.content` directly, silently produced an empty script, and the honest-lane gate read it as "model failed" when it was actually "runner failed to read the model output".
+
+The runner now hard-errors with `RuntimeError("model={slug} returned empty .content ...")` naming the model + token usage. It also best-effort extracts a fenced ```python block from `.reasoning` before failing — many reasoning models put the final code there. If you hit the error, either:
+
+- switch to a non-thinker slug: `export SOLO_MODEL=openai/gpt-4.1-mini` (or `anthropic/claude-haiku-4.5`), OR
+- raise the provider's `max_tokens` so the model has room for both reasoning and the answer.
+
+### Windows path normalization
+
+Claude Code's `Read` tool on Windows rejects POSIX-absolute paths like `/tmp/sfn-fresh/...`. When cold-starting on Windows, write outputs to `C:/tmp/...` (or `%TEMP%`) from the start — do NOT default to `/tmp/`. The PowerShell tool understands both, but `Read` does not auto-normalize.
+
+If a script must be Windows-portable, use `tempfile.gettempdir()` rather than hardcoding `/tmp`.
+
+### Default `--slice 3` ceiling under `--mode agent`
+
+`sample_data_200` slice 3 contains 2 sheet-level tasks. Value-fill (which is what `--mode agent` does) cannot solve sheet-level tasks by construction — the answer requires creating/filtering new sheets. So `--mode agent --slice 3` is capped at `hard@all=0.333` regardless of agent capability. If your goal is to evaluate the agent (not measure the slice geometry), either:
+
+- raise `--slice` to a value with more cell-level tasks, OR
+- switch to `--mode code-exec` / `--mode tool-loop` (which CAN solve sheet-level tasks via openpyxl scripts).
+
+### Attempts file schema (`--mode agent`)
+
+The runner expects `<attempts-dir>/<id>.json` shaped like:
+
+```json
+{
+  "1": { "Sheet1!B2": 123.45, "Sheet1!C2": "result" },
+  "2": { "Sheet1!B2": 456.78, "Sheet1!C2": "other"  },
+  "3": { "Sheet1!B2": 789.01, "Sheet1!C2": "third"  }
+}
+```
+
+Top-level keys `"1"`, `"2"`, `"3"` correspond to test cases 1..N (N = `num_test_cases(dataset, task_id)`). Each value is a `{cellRef: value}` map.
+
+### Honest-lane semantic gate (R36 P0-2)
+
+`cleanGeneralProbe` used to be purely structural (script-produced + has openpyxl + has argv + no timeout + no duplicate scripts). It would stay True even when v2/v3 of `--mode tool-loop` crashed with `SyntaxError`, which made critique-and-retry regressions look like "clean failures" instead of regressions.
+
+The runner now reports both axes in `results.json`:
+
+- `cleanStructuralProbe` — old behavior (script-shaped, no timeouts, no dup scripts).
+- `cleanSemanticProbe` — at least one iter ran without exception.
+- `cleanGeneralProbe` — both axes True.
+
+A row only counts toward `headline_hard_mean` when `cleanGeneralProbe == True`.
+
+### Degenerate-pass flagging (R36 P1-1)
+
+`test_case_results=[1,0,0]` reads as "1 solve + 2 misses" but can actually be "1 lucky degenerate match because the input workbook already contained the answer rows for test case 1, plus 2 crashes". The runner now sets `degeneratePasses: [test_case_indices]` on each row when grader records a 1 but the script crashed (`ranWithoutException=False` AND `output_written=False`) — that's the unambiguous signature of a lucky-on-untouched-input pass. The official `hard`/`soft` numbers are NOT mutated (the grader's verdict stays intact), but the flag is visible to anyone reading `results.json`.
+
 ## Honest boundaries
 - `--mode agent` value-fill handles **cell-level** tasks; **sheet-level** tasks need the code-exec
   attempt (model writes openpyxl code, run in the repo's `code_exec_docker`) — wire that as the
@@ -84,6 +140,34 @@ A 2-task held-out demo (agent-in-the-loop, sample_data_200, official grader):
 - The **referee stays out of the agent's reach**: the seal salt is the founder's/CI's
   (`SOLO_LEDGER_SALT`), and grading uses the benchmark's own code — the agent runs the loop but cannot
   forge the verdict. See `references/autonomy.md`.
+
+### Sealing the held-out slice (`SOLO_LEDGER_SALT` semantics)
+
+The salt is the **referee carve-out** — the one piece of state the agent provably never sees.
+Everything below is enforced by the file boundary (CI secret / founder's vault), not by trust.
+
+- **Why a salt at all.** The seal is `HMAC(salt, task_id)` over every dataset row, then the lowest-N
+  hashes become the held-out slice. Without a salt, the agent could re-derive which task ids are in
+  the slice (the dataset is public), prefetch them, and "solve" the held-out set by lookup. The salt
+  makes slice membership **unforgeable from the agent's side** while staying **deterministic on the
+  referee's side** — same salt + same dataset = same slice, every run, for replay/audit.
+- **What it seals.** Slice **membership** (which task ids are held out), not task **contents**. The
+  benchmark contents stay public; the salt only hides *which subset* counts toward the headline.
+- **Who owns it.** The founder, or CI on the founder's behalf. Store it in a CI secret
+  (`SOLO_LEDGER_SALT` env var on the runner) or a password manager (1Password / Bitwarden item).
+  **Never** commit it to the repo, never paste it into an agent prompt, never log it. If the agent
+  can read it (in env, in a file the agent has fs access to, in a tool response), the seal is broken
+  for that run — discard the row.
+- **When to rotate.** Per project, per quarter, or after any suspected leak — **never re-use across
+  projects**. Rotation is intentional and irreversible: old ledger rows become un-replayable because
+  the slice they were graded against no longer regenerates. That's the design — a rotated salt means
+  "those old verdicts are sealed history; new runs start a fresh held-out set the agent has never
+  seen." Treat rotation as a ledger-epoch boundary, not a bug.
+- **Unset salt → dev fallback.** If `SOLO_LEDGER_SALT` is unset, the runner falls back to the literal
+  string `dev-salt-change-me` and prints an explicit warning. This exists so a first-time contributor
+  can `python spreadsheetbench.py --slice 3 --dump` on their laptop without configuring secrets — it
+  is **dev-only**. A row sealed with `dev-salt-change-me` is **not** a real held-out probe and must
+  not be written to the headline ledger. CI should fail the run if the salt equals the fallback.
 
 ## Add another benchmark
 Copy this file's shape: `ensure_dataset` (clone from allowlist) · `seal_heldout` · `attempt` (api/agent)

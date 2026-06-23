@@ -149,7 +149,22 @@ def grade_task(grader, dpath, task, out_dir):
     return {"test_case_results": results, "soft": soft, "hard": hard}
 
 
+def _force_utf8_stdout():
+    """Reconfigure stdout/stderr to UTF-8 so em-dash/ellipsis/box-drawing render under
+    Windows PowerShell (default cp1252 console emits '?' for these). Cosmetic-only, but
+    the R36 rollup flagged em-dash mojibake in stdout across all three runners."""
+    for stream_name in ("stdout", "stderr"):
+        s = getattr(sys, stream_name, None)
+        if s is None:
+            continue
+        try:
+            s.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
 def main():
+    _force_utf8_stdout()
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=os.path.join(os.getcwd(), "SpreadsheetBench"))
     ap.add_argument("--dataset", default="sample_data_200")
@@ -206,22 +221,49 @@ def main():
             has_argv = "argv" in script
             scripted = bool(script) and has_openpyxl and has_argv
             any_timeout = False
+            tc_ran_clean = []
+            tc_output_written = []
             for i in range(1, n + 1):
                 in_path = tc_path(dpath, tid, i, "input")
                 out_path = os.path.join(out_dir, f"{i}_{tid}_output.xlsx")
-                timed_out = run_code_exec(script, in_path, out_path, timeout=a.code_timeout)
-                if timed_out:
+                st = run_code_exec(script, in_path, out_path, timeout=a.code_timeout)
+                if st["timeout"]:
                     any_timeout = True
+                tc_ran_clean.append(bool(st["ranWithoutException"]))
+                tc_output_written.append(bool(st["output_written"]))
             g = grade_task(grader, dpath, t, out_dir)
-            clean = scripted and not any_timeout
+            # P1-1: flag any tc that scored 1 while the script crashed (returncode!=0 AND
+            # no output file). That is a 'lucky degenerate match' on the untouched input,
+            # not a real solve. Reported in results.json, NOT subtracted from g["hard"]/g["soft"]
+            # (those remain the official grader's verdict, untouched).
+            degenerate_passes = []
+            for idx, (tc_score, ran_clean, out_ok) in enumerate(
+                zip(g.get("test_case_results", []) or [], tc_ran_clean, tc_output_written), start=1
+            ):
+                if tc_score == 1 and not ran_clean and not out_ok:
+                    degenerate_passes.append(idx)
+            # P0-2: semantic gate -- cleanGeneralProbe stays True only if the script also
+            # actually ran without exception on at least one test case. Without this, a
+            # SyntaxError run reads as a 'clean failure' which misleads the operator.
+            ran_clean_any = any(tc_ran_clean)
+            clean_structural = scripted and not any_timeout
+            clean = clean_structural and ran_clean_any
             rows.append({"id": tid, "type": t["instruction_type"], **g, "mode": a.mode,
-                         "cleanGeneralProbe": clean, "modelInLoop": True,
+                         "cleanGeneralProbe": clean,
+                         "cleanStructuralProbe": clean_structural,
+                         "cleanSemanticProbe": ran_clean_any,
+                         "degeneratePasses": degenerate_passes,
+                         "modelInLoop": True,
                          "codeExec": {"scripted": scripted, "timeout": any_timeout,
-                                      "hasOpenpyxl": has_openpyxl, "hasArgv": has_argv}})
+                                      "hasOpenpyxl": has_openpyxl, "hasArgv": has_argv,
+                                      "perTcRanClean": tc_ran_clean,
+                                      "perTcOutputWritten": tc_output_written}})
             if clean:
                 counted_hard.append(g["hard"])
+            dp_note = (f" degenerate_pass={degenerate_passes}" if degenerate_passes else "")
             print(f"  {tid}: hard={g['hard']} soft={g['soft']:.2f} ({g['test_case_results']}) "
-                  f"[code-exec scripted={scripted} timeout={any_timeout}]")
+                  f"[code-exec scripted={scripted} timeout={any_timeout} "
+                  f"ranClean={ran_clean_any}]{dp_note}")
             continue
         # ---- tool-loop: code-exec + critique-and-retry up to --max-loop-iters ----
         if a.mode == "tool-loop":
@@ -251,7 +293,9 @@ def main():
                         os.remove(probe_out)
                 except Exception:
                     pass
-                timed_out = run_code_exec(cur_script, probe_in, probe_out, timeout=a.code_timeout)
+                st = run_code_exec(cur_script, probe_in, probe_out, timeout=a.code_timeout)
+                timed_out = st["timeout"]
+                ran_clean = bool(st["ranWithoutException"])
                 if timed_out:
                     any_iter_timeout = True
                 diff = diff_workbook_against_input(probe_in, probe_out, t["answer_position"]) \
@@ -261,10 +305,13 @@ def main():
                     "iter": it + 1,
                     "scripted": True,
                     "timeout": timed_out,
+                    "ranWithoutException": ran_clean,
+                    "returncode": st.get("returncode"),
+                    "stderr_tail": st.get("stderr_tail", ""),
                     "duplicate": False,
                     "diff_summary": _short_diff_summary(diff),
                 })
-                # Stop early on timeout — no point retrying, we already failed the timeout honesty gate.
+                # Stop early on timeout -- no point retrying, we already failed the timeout honesty gate.
                 if timed_out:
                     break
                 # If this is the last allowed iter, do not request another script.
@@ -288,33 +335,63 @@ def main():
             has_openpyxl = "openpyxl" in final_script
             has_argv = "argv" in final_script
             scripted = bool(final_script) and has_openpyxl and has_argv
+            final_tc_ran_clean = []
+            final_tc_output_written = []
             for i in range(1, n + 1):
                 in_path = tc_path(dpath, tid, i, "input")
                 out_path = os.path.join(out_dir, f"{i}_{tid}_output.xlsx")
-                timed_out = run_code_exec(final_script, in_path, out_path, timeout=a.code_timeout)
-                if timed_out:
+                st = run_code_exec(final_script, in_path, out_path, timeout=a.code_timeout)
+                if st["timeout"]:
                     any_iter_timeout = True
+                final_tc_ran_clean.append(bool(st["ranWithoutException"]))
+                final_tc_output_written.append(bool(st["output_written"]))
             g = grade_task(grader, dpath, t, out_dir)
+            # P1-1: same degenerate-pass detection as code-exec lane.
+            degenerate_passes = []
+            for idx, (tc_score, ran_clean, out_ok) in enumerate(
+                zip(g.get("test_case_results", []) or [], final_tc_ran_clean, final_tc_output_written),
+                start=1
+            ):
+                if tc_score == 1 and not ran_clean and not out_ok:
+                    degenerate_passes.append(idx)
             # Honest gate (tool-loop): every iter produced a real script, no timeouts,
             # no two consecutive scripts identical, maxIters <= 3.
             had_duplicate = any(r.get("duplicate") for r in iter_records)
             all_scripted = all(r.get("scripted") for r in iter_records) and scripted
-            clean = (all_scripted and not any_iter_timeout and not had_duplicate
-                     and max_iters <= 3)
+            # P0-2: semantic axis -- at least one probe iter ran without exception, OR
+            # the final script ran clean on at least one test case. Without this, a run
+            # where v1 was 'wrong place but valid' and v2/v3 are SyntaxError still gets
+            # cleanGeneralProbe=True, hiding that critique-and-retry made things strictly worse.
+            ran_clean_any_iter = any(r.get("ranWithoutException") for r in iter_records)
+            ran_clean_final = any(final_tc_ran_clean)
+            clean_structural = (all_scripted and not any_iter_timeout and not had_duplicate
+                                and max_iters <= 3)
+            clean_semantic = ran_clean_any_iter or ran_clean_final
+            clean = clean_structural and clean_semantic
             loop_iters_used = len(scripts)
             rows.append({"id": tid, "type": t["instruction_type"], **g, "mode": a.mode,
-                         "cleanGeneralProbe": clean, "modelInLoop": True,
+                         "cleanGeneralProbe": clean,
+                         "cleanStructuralProbe": clean_structural,
+                         "cleanSemanticProbe": clean_semantic,
+                         "degeneratePasses": degenerate_passes,
+                         "modelInLoop": True,
                          "toolLoop": {"loopIters": loop_iters_used,
                                        "maxIters": max_iters,
                                        "scripted": scripted,
                                        "anyTimeout": any_iter_timeout,
                                        "hadDuplicateScript": had_duplicate,
+                                       "ranCleanAnyIter": ran_clean_any_iter,
+                                       "ranCleanFinal": ran_clean_final,
+                                       "finalPerTcRanClean": final_tc_ran_clean,
+                                       "finalPerTcOutputWritten": final_tc_output_written,
                                        "iters": iter_records}})
             if clean:
                 counted_hard.append(g["hard"])
+            dp_note = (f" degenerate_pass={degenerate_passes}" if degenerate_passes else "")
             print(f"  {tid}: hard={g['hard']} soft={g['soft']:.2f} ({g['test_case_results']}) "
                   f"[tool-loop iters={loop_iters_used}/{max_iters} "
-                  f"scripted={scripted} timeout={any_iter_timeout} dup={had_duplicate}]")
+                  f"scripted={scripted} timeout={any_iter_timeout} dup={had_duplicate} "
+                  f"ranCleanFinal={ran_clean_final}]{dp_note}")
             continue
         # ---- attempt (model in the loop) ----
         if a.mode == "agent":
@@ -345,10 +422,65 @@ def main():
     print(f"results -> {a.out}")
 
 
+def _extract_completion_content(r, model, fn_name):
+    """Pull the assistant text out of an OpenAI ChatCompletion, with a hard error on the
+    reasoning-model gotcha that silently breaks the harness.
+
+    Background (R36 P0-1): reasoning-tuned slugs on OpenRouter (e.g. z-ai/glm-5.2 and most
+    deepseek/qwen3 thinker variants) frequently return `choices[0].message.content == None`
+    while consuming all tokens in `.reasoning` / `.reasoning_content`. The old code did
+    `r.choices[0].message.content.strip()` which silently raises AttributeError or produces
+    an empty script — the honest-lane gate then reads it as "model failed" when it's
+    actually "runner failed to read the model output". This helper:
+
+      1) Surfaces a HARD RuntimeError naming the model + token usage so the operator can
+         switch model or raise max_tokens.
+      2) As a best-effort recovery, extracts a fenced ```python block from the reasoning
+         trace before failing — many reasoning models emit the final code there.
+
+    Args:
+      r          : the ChatCompletion response object.
+      model      : the model slug (for error messaging).
+      fn_name    : the calling function ("code_exec_script" / "critique_and_retry" / "api_attempt").
+    Returns: the assistant text (non-empty), stripped.
+    Raises : RuntimeError if neither .content nor an extractable fenced block in .reasoning is usable.
+    """
+    msg = r.choices[0].message
+    content = getattr(msg, "content", None)
+    if content and content.strip():
+        return content.strip()
+    # Fallback: many reasoning models put the final code inside the reasoning trace.
+    reasoning = getattr(msg, "reasoning", None) or getattr(msg, "reasoning_content", None)
+    if reasoning:
+        import re
+        m = re.search(r"```(?:python)?\s*\n(.*?)```", reasoning, re.DOTALL)
+        if m and m.group(1).strip():
+            print(f"   [{fn_name}] WARN: model={model} returned content=None; "
+                  f"recovered ```python block from .reasoning ({len(m.group(1))} chars).")
+            return m.group(1).strip()
+    # Hard error — better to fail loudly than to write an empty script and call it 'model failed'.
+    usage = getattr(r, "usage", None)
+    usage_repr = ""
+    if usage is not None:
+        try:
+            usage_repr = f" usage={usage.model_dump() if hasattr(usage, 'model_dump') else dict(usage)}"
+        except Exception:
+            usage_repr = f" usage={usage}"
+        reasoning_len = len(reasoning or "")
+    raise RuntimeError(
+        f"[{fn_name}] model={model} returned empty .content "
+        f"(reasoning_len={len(reasoning or '')}{usage_repr}). "
+        "This is the R36 reasoning-model gotcha — the model consumed all tokens in the "
+        "reasoning trace. Either switch SOLO_MODEL to a non-thinker slug "
+        "(e.g. openai/gpt-4.1-mini, anthropic/claude-haiku-4.5) or raise the provider's "
+        "max_tokens. See templates/run/README.md '#reasoning-model gotcha'."
+    )
+
+
 def code_exec_script(task, dpath, grader):
     """Ask the model for ONE openpyxl python script. argv[1]=input, argv[2]=output. Returns the script text.
 
-    Honesty: prompt carries the instruction + answer_position + a 30-row input preview — same
+    Honesty: prompt carries the instruction + answer_position + a 30-row input preview -- same
     information api_attempt already gets. We do NOT show the answer workbook.
     """
     from openai import OpenAI
@@ -400,7 +532,7 @@ def code_exec_script(task, dpath, grader):
     )
     r = client.chat.completions.create(model=model, messages=[{"role": "user", "content": prompt}],
                                        temperature=0)
-    code = r.choices[0].message.content.strip()
+    code = _extract_completion_content(r, model, "code_exec_script")
     # Defensive strip of accidental ``` fences
     if code.startswith("```"):
         code = code.strip("`")
@@ -466,8 +598,20 @@ def _strip_styling(code: str):
 def run_code_exec(script, in_path, out_path, timeout=60):
     """Execute the model-authored script in a tempdir against a copy of the input.
 
-    Returns True if the script timed out, else False. Failure (nonzero, timeout, missing output)
-    leaves out_path absent so the grader scores 0 via 'File not exist' — no soft pass-through.
+    Returns a status dict: {timeout: bool, ranWithoutException: bool, returncode: int,
+    stderr_tail: str, output_written: bool}. Failure (nonzero, timeout, missing output)
+    leaves out_path absent so the grader scores 0 via 'File not exist' -- no soft pass-through.
+
+    Honest-lane note (R36 P0-2): `timeout` alone is NOT a sufficient gate. A SyntaxError
+    from critique-and-retry's v2/v3 returns rc!=0 (ranWithoutException=False) and silently
+    looks identical to "model ran, output happened to be wrong" if you only check timeout.
+    Callers MUST inspect `ranWithoutException` so cleanGeneralProbe is semantic, not just
+    structural.
+
+    Back-compat: this function used to return a bare bool (timed_out). Some callers may
+    still treat the return as truthy/falsy -- the dict's truthiness is fine for new code,
+    but legacy `if run_code_exec(...):` checks will now evaluate True for ANY non-empty
+    dict. All in-repo callers have been updated to read the keys explicitly.
     """
     import tempfile, shutil
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
@@ -484,15 +628,22 @@ def run_code_exec(script, in_path, out_path, timeout=60):
                                   capture_output=True, text=True)
         except subprocess.TimeoutExpired:
             print(f"   code-exec TIMEOUT after {timeout}s for {os.path.basename(in_path)}")
-            return True
-        if proc.returncode != 0:
+            return {"timeout": True, "ranWithoutException": False, "returncode": None,
+                    "stderr_tail": f"TIMEOUT after {timeout}s", "output_written": False}
+        ran_clean = (proc.returncode == 0)
+        if not ran_clean:
             tail = (proc.stderr or "")[-400:]
             print(f"   code-exec NONZERO rc={proc.returncode} stderr={tail}")
-            return False
+        else:
+            tail = ""
+        output_written = False
         if os.path.isfile(op):
             shutil.copyfile(op, out_path)  # grader will find it
+            output_written = True
         # else: grader's compare_workbooks returns ('File not exist') -> scored 0.
-        return False
+        return {"timeout": False, "ranWithoutException": ran_clean,
+                "returncode": proc.returncode, "stderr_tail": tail,
+                "output_written": output_written}
 
 
 def _parse_answer_segments(answer_position):
@@ -696,7 +847,7 @@ def critique_and_retry(task, dpath, grader, prev_script, diff):
     )
     r = client.chat.completions.create(model=model, messages=[{"role": "user", "content": prompt}],
                                        temperature=0)
-    code = r.choices[0].message.content.strip()
+    code = _extract_completion_content(r, model, "critique_and_retry")
     if code.startswith("```"):
         code = code.strip("`")
         if code.startswith("python"):
@@ -722,7 +873,12 @@ def api_attempt(task, dpath, grader):
                   '{"Sheet1!B2": 123.45}. No prose.')
         r = client.chat.completions.create(model=model, messages=[{"role": "user", "content": prompt}],
                                            temperature=0)
-        txt = r.choices[0].message.content.strip().strip("`")
+        try:
+            txt = _extract_completion_content(r, model, "api_attempt").strip("`")
+        except RuntimeError as e:
+            print(f"   api_attempt: {e}")
+            out[str(i)] = {}
+            continue
         if txt.startswith("json"):
             txt = txt[4:]
         try:

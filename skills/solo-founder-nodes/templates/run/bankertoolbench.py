@@ -416,7 +416,21 @@ def honest_headline(rows, lane, manifest, dataset_label, caveats):
 # ---------------------------------------------------------------------------
 # main
 # ---------------------------------------------------------------------------
+def _force_utf8_stdout():
+    """Reconfigure stdout/stderr to UTF-8 (Windows PowerShell defaults to cp1252 and renders
+    em-dash/ellipsis as '?'). Cosmetic-only fix from R36 P2-1."""
+    for stream_name in ("stdout", "stderr"):
+        s = getattr(sys, stream_name, None)
+        if s is None:
+            continue
+        try:
+            s.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
 def main():
+    _force_utf8_stdout()
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", default=os.path.join(os.getcwd(), "bankertoolbench"))
     ap.add_argument("--local-checkout", default=os.environ.get("BTB_LOCAL_CHECKOUT"),

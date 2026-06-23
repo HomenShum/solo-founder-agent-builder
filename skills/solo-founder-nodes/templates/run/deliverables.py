@@ -455,6 +455,15 @@ def _selftest(out_dir=None):
 
 if __name__ == "__main__":
     import sys
+    # R36 P2-1: console mojibake fix -- em-dash/ellipsis under Windows PowerShell render
+    # as '?' without UTF-8 stdout. Cosmetic but it shows up in every demo recording.
+    for stream_name in ("stdout", "stderr"):
+        s = getattr(sys, stream_name, None)
+        if s is not None:
+            try:
+                s.reconfigure(encoding="utf-8", errors="replace")
+            except Exception:
+                pass
     if len(sys.argv) >= 2 and sys.argv[1] == "--selftest":
         sys.exit(_selftest(sys.argv[2] if len(sys.argv) > 2 else None))
     print(__doc__)
