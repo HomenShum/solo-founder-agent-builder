@@ -1,0 +1,27 @@
+# Python deps for the SpreadsheetBench reference adapter (run/spreadsheetbench.py).
+# Install before any --mode invocation:   pip install -r requirements.txt
+# These are the ONLY two packages spreadsheetbench.py imports at runtime
+# (both lazy/function-local). `sfn doctor` checks they are importable.
+#
+# --- SpreadsheetBench (run/spreadsheetbench.py) ---
+openpyxl>=3.1,<4        # read/write .xlsx for value-fill, code-exec, and the official grader
+openai>=1.30,<2         # --mode api and critique_and_retry (OpenAI Python SDK v1.x)
+#
+# --- BankerToolBench (run/bankertoolbench.py + run/deliverables.py) ---
+# The portable deliverable writers turn one universal `plan` dict into the four
+# office artifacts a junior-IB diligence task expects. Each writer imports its lib
+# LAZILY and degrades gracefully if missing, so you can install a subset (e.g. xlsx
+# only) — but the full set is needed to materialize every deliverable type.
+#   (openpyxl above is shared — the xlsx writer + the local-proxy grader use it.)
+python-pptx>=0.6.21     # write_presentation -> .pptx pitch/teaser decks
+python-docx>=1.1,<2     # write_document     -> .docx memos/reports
+reportlab>=4.0,<5       # write_pdf          -> .pdf reports (heaviest dep; pdf writer no-ops if absent)
+# NOTE: BankerToolBench has NO public callable scorer. bankertoolbench.py grades in
+# two lanes: --grade-lane official (shell out to the real Harbor+Gandalf, read
+# reward.json — needs Docker + HF data + judge keys, NOT pip-installable here) and
+# --grade-lane local (a deterministic UNOFFICIAL proxy, no extra deps). Neither lane
+# adds a Python package beyond the four office libs above.
+#
+# NOTE: keep this a SINGLE requirements.txt. When another benchmark adapter is
+# added, append a new "--- <benchmark> ---" comment block below rather than forking
+# this file, so `sfn doctor` and the README Step 0 stay one install.

@@ -7,9 +7,12 @@ Closes the benchmark-driven loop. You already have an adapter that runs tasks th
 Inputs:
 - The three task splits: TUNED (you may inspect + iterate on), HELD-OUT (run, never tune on), GENERALIZATION (off-distribution; run, never tune on). For the dogfood: BankerToolBench tuned/held-out + the non-BTB generalization slice.
 - The deterministic grader: `docs/eval/nonbtb/grade.py` (correctness / formula / citation / fabrication; self-tested — run its self-test first).
-- **Reference autonomous runner (SHAPE, not the workflow):** [`templates/run/`](../templates/run/) — `spreadsheetbench.py` is one worked adapter showing the *shape* (clone-from-allowlist → seal held-out → **model-in-loop** attempt → grade with the benchmark's **OWN** grader → honest headline). **For the user's app you do NOT run SpreadsheetBench unless their app is spreadsheet-shaped.** Discover/benchmark pick or build the right adapter for *that* app — either a public benchmark whose tasks transfer (SWE-bench, BankerToolBench, SpreadsheetBench, …) or a held-out set generated from the app's real usage. Same shape, same gate.
-- The slice contract + materializers-off rule: `docs/eval/BTB_GENERALIZATION_DIAGNOSTIC.md`.
-- The parallel runner: `scripts/bankertoolbench-nodeagent-parallel.ps1` (throttled parallel runs).
+- **Reference autonomous runners (SHAPE, not the workflow):** [`templates/run/`](../templates/run/) ships TWO worked adapters, both showing the same *shape* (clone-from-allowlist → seal held-out → **model-in-loop** attempt → grade → honest headline):
+  - `spreadsheetbench.py` — grades with the benchmark's **OWN** grader (`evaluation.compare_workbooks`, never reimplemented). Use when the app is spreadsheet-shaped.
+  - `bankertoolbench.py` + `deliverables.py` — for DELIVERABLE-shaped tasks (Excel/PPTX/DOCX/PDF). **BankerToolBench has no public callable scorer**, so this runner has two grade lanes: `--grade-lane official` (shell out to the real Harbor+Gandalf, read `reward.json`) and `--grade-lane local` (a deterministic UNOFFICIAL proxy with the same correctness/formula/citation/fabrication axes as `grade.py`, NO LLM on the scored path). The lane label is printed on every result — the local proxy is never reported as the official BTB number.
+  **For the user's app you do NOT run SpreadsheetBench OR BankerToolBench unless the app is that shape.** Discover/benchmark pick or build the right adapter for *that* app — a public benchmark whose tasks transfer (SWE-bench, BankerToolBench, SpreadsheetBench, …) or a held-out set from the app's real usage. Same shape, same gate.
+- The slice contract + materializers-off rule (dogfood): `docs/eval/BTB_GENERALIZATION_DIAGNOSTIC.md` — the principle (run with per-task writers OFF) is portable; the portable runner enforces it via the clean-probe gate (a row counts only if a deliverable was materialized by the model in the loop on a sealed task).
+- A parallel/throttled run wrapper around the runner. *(Dogfood: `scripts/bankertoolbench-nodeagent-parallel.ps1`. For the portable templates, loop `bankertoolbench.py` over slices yourself, throttled to your API budget.)*
 - The agent adapter from the prior phase (the thing that drives the real NodeRoom agent over a task).
 
 Outputs:
@@ -20,7 +23,7 @@ Outputs:
 0. **Load safe project memory (QUARANTINED read).** Pull from memory ([`../references/memory.md`](../references/memory.md), L2): the chosen shared-component target, prior fixes + their held-out/generalization deltas, the kill-threshold (min-delta + max-iterations), the failure-class clusters, and the split *hashes*. Read aggregate SCORES and failure CLASSES only — the held-out/generalization per-task CONTENTS must stay quarantined out of memory, or cross-session memory becomes an answer-key leak that silently defeats the anti-overfit design. Memory is a tuned-signal + scores store, not a held-out-content channel.
 1. **Self-test the grader.** Run `grade.py`'s self-test. If it doesn't pass, stop — a broken grader fakes every downstream number. (Re your honesty contract: the grader is the measuring instrument; calibrate it before measuring.)
 2. **Freeze the splits.** Confirm TUNED / HELD-OUT / GENERALIZATION membership from `BTB_GENERALIZATION_DIAGNOSTIC.md` and record the split hashes. HELD-OUT and GENERALIZATION are write-locked for this whole phase — you may read their pass/fail, never their per-task contents while fixing.
-3. **Run all three slices** via `scripts/bankertoolbench-nodeagent-parallel.ps1` (throttle to your API budget — see Gate). Write raw transcripts to `docs/eval/runs/<ts>/`. Run with materializers OFF (the `BTB_GENERALIZATION_DIAGNOSTIC.md` rule) so a precomputed answer can't masquerade as agent competence.
+3. **Run all three slices** by looping the portable runner ([`templates/run/bankertoolbench.py`](../templates/run/bankertoolbench.py) `--mode agent`/`api`, `--slice`, sealed `--salt`) over each slice, throttled to your API budget — see Gate. *(Dogfood uses `scripts/bankertoolbench-nodeagent-parallel.ps1` to parallelize the same calls.)* Write raw transcripts to `docs/eval/runs/<ts>/`. Run with per-task materializers OFF (the `BTB_GENERALIZATION_DIAGNOSTIC.md` rule; the portable `deliverables.py` is the GENERIC writer only — no per-task package builders) so a precomputed answer can't masquerade as agent competence.
 4. **Grade deterministically.** Score every run with `grade.py` — no LLM judge on the scored path. Emit per-task pass/fail + failure class (incorrect / bad-formula / missing-citation / fabrication / tool-error / timeout).
 5. **Classify into SHARED root causes.** Cluster the TUNED failures by the component they implicate (planner, a tool, the citation step, the output formatter). **Human comments here** to confirm the cluster and pick the target. The rule: fix a component many tasks share, never a writer that only lifts named tasks.
 6. **Make ONE fix** to that shared component. Optionally iterate fast with `harbor --disable-verification` for tight inner-loop turnaround (verification re-enabled before any number counts — see Gate).
@@ -36,13 +39,18 @@ Outputs:
 ## Gate (heavy/irreversible — explicit approval required)
 The parallel runs spend API money. Before executing step 3 (and each re-measure in step 7), GUIDE → GENERATE → GATE:
 - Present the plan: which slices, task counts, model, throttle/concurrency, and the **estimated total API cost** + wall-clock.
-- Show the exact command (e.g. `pwsh scripts/bankertoolbench-nodeagent-parallel.ps1 -Slice held-out -Concurrency N -Model <id>`), dry-run the task enumeration first (list tasks, no model calls).
+- Show the exact command (portable: `python templates/run/bankertoolbench.py --slice N --salt <s> --mode api --grade-lane local --rubrics-dir ./rubrics`; dogfood: `pwsh scripts/bankertoolbench-nodeagent-parallel.ps1 -Slice held-out -Concurrency N -Model <id>`), and dry-run the task enumeration first — `--dump` lists the sealed tasks with NO model calls.
 - Get explicit approval before the spend. Re-confirm if a re-measure materially raises cost.
 - `harbor --disable-verification` is for the fix inner-loop ONLY; re-enable verification before any number that lands in the scorecard (an unverified run is not a result).
 
 ## Reuse (existing assets to lean on)
-- `docs/eval/nonbtb/grade.py` — deterministic correctness/formula/citation/fabrication grader (self-tested); the measuring instrument for step 4.
-- `docs/eval/BTB_GENERALIZATION_DIAGNOSTIC.md` — the tuned/held-out/non-BTB scorecard layout + the materializers-off rule (steps 2, 3, and the scorecard shape).
-- `scripts/bankertoolbench-nodeagent-parallel.ps1` — throttled parallel runner for step 3 + step 7 re-measures.
-- `harbor --disable-verification` — fast fix-iteration in step 6 (verification back on before scoring).
-- The official contract `docs/eval/bankertoolbench-official-contract.json` — the dogfooded BankerToolBench task shape the adapter and grader speak.
+**Portable (ship with the skill):**
+- [`templates/run/bankertoolbench.py`](../templates/run/bankertoolbench.py) — the portable runner for steps 3 + 7 (seal → attempt → materialize → grade in two lanes → honest headline); `--dump` is the dry-run enumeration for the Gate.
+- [`templates/run/deliverables.py`](../templates/run/deliverables.py) — the GENERIC four-artifact writer the runner materializes (the writer you fix in step 6 if the output-formatter is the shared root cause — but keep it generic, never per-task).
+- `docs/eval/nonbtb/grade.py` — the deterministic correctness/formula/citation/fabrication grader (self-tested); its axes are exactly what `bankertoolbench.py --grade-lane local` re-implements over the deliverables. The measuring instrument for step 4.
+
+**Dogfood instance (NodeRoom — reference / official lane):**
+- `docs/eval/BTB_GENERALIZATION_DIAGNOSTIC.md` — the tuned/held-out/non-BTB scorecard layout + the materializers-off rule (steps 2, 3, scorecard shape).
+- `scripts/bankertoolbench-nodeagent-parallel.ps1` — the dogfood's throttled parallel wrapper around the runner for step 3 + step 7 re-measures.
+- `harbor --disable-verification` — fast fix-iteration in step 6, OFFICIAL lane only (verification back on before scoring).
+- `docs/eval/bankertoolbench-official-contract.json` — the dogfood's pinned BTB task contract; the portable contract is the `bankertoolbench.py` header.

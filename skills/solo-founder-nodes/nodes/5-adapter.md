@@ -7,7 +7,8 @@ Builds the thin adaptation layer between the benchmark harness's agent contract 
 - The chosen benchmark + harness contract from the prior phase (the `BaseAgent` interface, env/rollout signature, expected output directory layout, scoring expectations).
 - Your app's real agent runner entrypoint (CLI, module, or HTTP endpoint) — the same one the live UI drives.
 - Model routing config: the `model_id` you want to evaluate (e.g. an `openrouter/…` or `inference.ai` slug) and how to pass it to the runner.
-- Worked example to copy from: `btb_noderoom_agent/harbor_adapter.py` (NodeRoom's Harbor `BaseAgent` subclass `NodeRoomNodeAgent`, which shells the app's runner via `subprocess` and routes the model through a `model_id` arg).
+- **PORTABLE worked example to copy from (ships with the skill):** [`templates/run/bankertoolbench.py`](../templates/run/bankertoolbench.py) + [`templates/run/deliverables.py`](../templates/run/deliverables.py) — a self-contained adapter (stdlib + four office libs only, zero app coupling) that mirrors the same SHAPE: clone-from-allowlist → seal held-out → model-in-loop **attempt** emitting a universal `plan` dict → materialize the four deliverables → grade → honest headline. `deliverables.py` is the portable lift of the four GENERIC writers (`write_workbook`/`write_presentation`/`write_document`/`write_pdf`); it does NOT carry any per-task package builders.
+- *Dogfood instance (do NOT copy — it is app-locked):* NodeRoom's `btb_noderoom_agent/harbor_adapter.py` is a Harbor `BaseAgent` subclass `NodeRoomNodeAgent` that shells NodeRoom's runner via `subprocess`. The portable templates above are the lift of its generic core; reference it only to see the full dogfood, not as the thing a fresh user must clone.
 
 ## Outputs (the artifact it produces)
 - An adapter module (e.g. `btb_<app>_agent/harbor_adapter.py`) exposing the harness's agent class, with:
@@ -44,8 +45,12 @@ GUIDE → GENERATE → GATE before any execution that builds containers, pulls i
 3. **GATE:** require explicit human approval (a comment) before running the container build or any paid model call. The single-task smoke is the cheapest real proof — run it before any full sweep.
 
 ## Reuse (existing assets — real paths)
-- `btb_noderoom_agent/harbor_adapter.py` — the dogfooded `BaseAgent` adapter to copy: `NodeRoomNodeAgent(model_id=…, materializer_mode=…)`, subprocess to the real runner, `materializer_mode ∈ {replay, general-only}`, `materializer_mode.json` provenance.
-- `docs/eval/BTB_GENERALIZATION_DIAGNOSTIC.md` — the diagnostic naming the `write_*_package` dispatch as the contamination to revert; read it before touching any materializer.
-- `src/eval/bankerToolBenchRunner.ts` — the app-side runner the adapter shells into (same path the live agent uses).
-- `scripts/bankertoolbench-nodeagent-smoke-runner.ts` — the single-task smoke pattern to mirror for step 6.
-- `docs/eval/BANKERTOOLBENCH_NODEROOM_EXECUTION_PLAN.md` + `docs/eval/BANKERTOOLBENCH_LOOP_ITERATIONS.md` — the worked-example loop this adapter feeds.
+**Portable (ship with the skill — copy these):**
+- [`templates/run/bankertoolbench.py`](../templates/run/bankertoolbench.py) — the PORTABLE adapter to copy: `ensure_dataset` (clone from allowlist) → `seal_heldout` (HMAC, doctrine S12) → `attempt` (`--mode agent`/`api`, emits the universal `plan` dict) → materialize via `deliverables.py` → `grade` (two lanes: official Harbor+Gandalf vs deterministic local proxy) → honest headline. Smoke: `python bankertoolbench.py --selftest` and `python bankertoolbench.py --dump --slice 1`.
+- [`templates/run/deliverables.py`](../templates/run/deliverables.py) — the four GENERIC, parameterized writers (`write_workbook` xlsx / `write_presentation` pptx / `write_document` docx / `write_pdf` pdf) + `write_deliverables(plan, out_dir)`. Each lazy-imports its office lib and no-ops if absent. **This is exactly where you DO NOT add a `write_<task>_package` builder** — keep it the generic four.
+- [`templates/run/requirements.txt`](../templates/run/requirements.txt) — the `--- BankerToolBench ---` block (`python-pptx`, `python-docx`, `reportlab`; `openpyxl` shared).
+
+**Dogfood instance (NodeRoom — reference only, app-locked, do NOT copy):**
+- `btb_noderoom_agent/harbor_adapter.py` — the full dogfood `BaseAgent` adapter (`NodeRoomNodeAgent(model_id=…, materializer_mode=…)`, subprocess to the real runner, `materializer_mode.json` provenance). The portable `deliverables.py` is the lift of its four generic writers; this file additionally carries the per-task `write_*_package` builders that are the contamination to AVOID.
+- `docs/eval/BTB_GENERALIZATION_DIAGNOSTIC.md` — the diagnostic naming the `write_*_package` dispatch as the contamination to revert; the principle is portable even though the path is the dogfood's.
+- `docs/eval/BANKERTOOLBENCH_ANTI_CHEAT_DOCTRINE.md` — S12 (split sealing) is what `seal_heldout` implements; the official-vs-product lane separation is what the two `--grade-lane` values enforce.
