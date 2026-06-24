@@ -43,11 +43,13 @@ ok("templates substrate present", [
   "memory/localMemory.ts",
   "context/graphContext.ts",
   "control/controlPlane.ts",
+  "setup/externalSetupGate.ts",
   "research/researchSpine.ts",
   "design/designSkillBridge.ts",
   "gstack/gstackBridge.ts",
 ].every((f) => existsSync(join(skill, "templates", f))));
 ok("context/control directives present", /context-substrate/i.test(master) && /control-plane/i.test(master));
+ok("external setup gate directive present", /External setup gate/i.test(master) && /deterministic prework/i.test(master) && /server-side secret/i.test(master));
 ok("research-backed implementation directive present", /research-spine/i.test(master) && /research-backed implementation/i.test(master));
 ok("design skill portability directive present", /design skills are portable inputs/i.test(master) && /designSkillBridge/i.test(master) && /design flow/i.test(master));
 ok("gstack operating lanes directive present", /gstack/i.test(master) && /gstackBridge/i.test(master) && /portable operating/i.test(master));

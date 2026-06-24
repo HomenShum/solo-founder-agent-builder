@@ -8,6 +8,11 @@ Turns the gap report from the prior phase into running code, on the user's actua
 - **Outputs:** a proposed **diff** (new/changed files for the agent layer + UI layer), plus a short build note listing what was added, which tool stubs are still TODO, and how to invoke the task both programmatically and through the UI. Nothing is committed before the Gate.
 
 ## Procedure (agent-driven; human steers by comment)
+0x. **Do deterministic provider/setup work before any credential pause.** If a real provider, storage
+service, deploy secret, OAuth app, or billing account is missing, build the pieces that do not need it:
+server-side adapter interface, server-only env var names, missing-secret UI, blocked-path test, setup
+doc, cost/latency ledger shape, and exact resume command. Generate an external setup receipt with
+`npm run sfn -- setup gate ...`. Do not stop at "need API key" while these pieces are still unbuilt.
 0. **Load safe project memory + check prior decisions.** Before scaffolding, read from memory ([`../references/memory.md`](../references/memory.md), L1/L3): the detected stack + prior template choice, the existing harness/tool registry shape, approved architecture rules, founder stack/design preferences, AND the prior REJECTED fixes. Do NOT re-propose an architecture or a fix the human already rejected, and EXTEND the existing tool registry rather than forking it. Read split hashes/scores only — never held-out task contents (quarantine).
 0a. **Gate implementation decisions through the Research Spine.** Run `npm run sfn -- research verify research-spine.json`. For every major architecture choice in this phase, add or update a decision receipt with `requirementId`, `chosenApproach`, rejected alternatives, research source ids, practical/inspiration source ids, eval metric ids, and risk. Do not build from a claim labeled `unsupported_assumption` unless the output is explicitly a stretch/prototype lane.
 0b. **Gate implementation process through gstack lanes.** Run `npm run sfn -- gstack recommend --phase build --goal "<goal>" --ui --security --risk high` when the work touches UI, credentials, provider calls, deployment, user data, or broad architecture. The plan must include `plan-eng-review`; UI work must include `plan-design-review`; code landing must include `review`; security-boundary work must include `cso`; high-risk work must include `guard`. Store the receipts in the build note before mutating code.
@@ -20,6 +25,9 @@ Turns the gap report from the prior phase into running code, on the user's actua
 7. **Write decision/provenance memory + hand off.** Persist to memory ([`../references/memory.md`](../references/memory.md), L1/L2): which template was applied, the wired seam (UI trigger → harness → tools → artifact), the clean-probe lane that now exists, any Component Contract produced by the Design Bridge, and the still-TODO stubs (what's real vs placeholder) so Phase 5 (adapter) and Phase 6 (iterate) inherit it. Then **hand off** to the run/verify phase — do NOT self-certify that it works; in-app browser verification belongs to the next phase.
 
 ## Honesty guardrail (the slice that applies here)
+- **EXTERNAL SETUP GATE:** missing credentials block live provider proof only after deterministic
+  prework is complete. Provider keys must be server-side only; `VITE_*`/`NEXT_PUBLIC_*` provider-key
+  wiring is a security bug, not a setup shortcut.
 - **NO ANSWER-KEYS:** tools must do real work. No per-task detectors, hardcoded outputs, or branches keyed on a known task id. If a change only makes the tuned tasks pass, revert it.
 - **IN-APP TRANSFER (built-in here):** build the UI surface in the SAME action as the agent layer so the task is runnable through the real app — a harness that only passes via a private script is not done. (The actual browser-verification proof is the next phase's job; here you just make it possible.)
 - **HONEST PROVENANCE:** the build note must mark every tool stub that is still a placeholder as TODO/unverified — never describe a stub as working.

@@ -61,6 +61,14 @@ proof artifact. From `build` onward, block uncited decisions; from `verify` onwa
 major claims that lack proof artifacts. Spec: [`references/research-spine.md`](references/research-spine.md);
 templates in [`templates/research/`](templates/research/).
 
+**External setup gate:** API keys, OAuth, billing, storage, and production provider setup are human
+gates, but the agent must finish every deterministic part before pausing: adapter boundary,
+server-side secret env names, missing-secret UI, blocked-path test, setup docs, cost/latency ledger
+shape, and exact resume commands. Use
+[`templates/setup/externalSetupGate.ts`](templates/setup/externalSetupGate.ts) or
+`npm run sfn -- setup gate ...`; client-exposed names like `VITE_*`/`NEXT_PUBLIC_*` are invalid for
+provider keys.
+
 **Design skills:** design guidance is not Claude Code locked. Use
 [`templates/design/designSkillBridge.ts`](templates/design/designSkillBridge.ts) or
 `npm run sfn -- design recommend ...` for short selection or `npm run sfn -- design flow ...` for the

@@ -17,6 +17,11 @@ Turns "I picked a benchmark" into "the runner, the dataset, and the verifier are
 - A pulled/built container image + downloaded dataset on the pinned disk. *(Official lane only — the portable `--grade-lane local` proxy needs none of this.)*
 - A `SETUP.md` (or appended section) recording exact versions, image digests, dataset revision, disk paths, and the one-line smoke command — so Phase "honest provenance" can trace every later number back to this environment.
 
+- An **external setup receipt** when a provider, deploy, storage, OAuth, billing, or API key blocks
+  real-world proof. The receipt must show completed deterministic prework, server-side env var names,
+  setup links, missing human action, and exact resume commands. Generate/check it with
+  `npm run sfn -- setup gate ...`.
+
 ## Procedure (agent-driven; human steers by comment)
 0. **Run the portable gstack setup lane when infra is involved.** Run `npm run sfn -- gstack recommend --phase setup --goal "<goal>" --deploy --security --devex` before choosing databases, object storage, auth, deployment, or paid services. The plan must include `plan-eng-review`, `plan-devex-review`, `setup-deploy`, and `cso` when secrets or trust boundaries are involved. Carry the receipts into `SETUP.md`.
 1. **Probe read-only.** Agent reports OS, `docker version`, `python --version`, free space on the target disk, and whether Docker Desktop/WSL2 is running. No installs yet. *(Human comments the disk + budget if not already chosen.)*
@@ -27,13 +32,21 @@ Turns "I picked a benchmark" into "the runner, the dataset, and the verifier are
 6. **Dry-run (official lane only).** Where the tool supports it, show `--dry-run` / `docker pull --quiet` size estimates / `huggingface-cli download --dry-run` so the human sees the byte cost before approving.
 7. **GATE → execute** the heavy steps (see Gate) only after explicit approval: pull/build the image, download the dataset to the pinned disk, install the runner.
 8. **Smoke one task.** Run a single benchmark task end-to-end to prove the wiring. PORTABLE smoke (ungated): `python templates/run/bankertoolbench.py --dump --slice 1` lists the sealed task and `--mode agent … --grade-lane local` materializes + grades it with the deterministic proxy. OFFICIAL smoke (gated): one task through the Harbor runner with the LLM judge — confirm the verifier returns a real score, not a stub.
-9. **Record provenance.** Write `SETUP.md` with image digest, dataset revision, tool versions, disk paths, the grade lane used, and the smoke result. *(Human comments to approve the recorded baseline.)*
+9. **If credentials or external services block real proof, exhaust deterministic prework first.**
+   Before pausing for the founder, finish the adapter boundary, server-side secret names,
+   missing-secret UI, blocked-path test, provider/storage setup doc, cost/latency ledger schema, and
+   resume command. Then emit an external setup receipt. Do not put provider keys in `VITE_`,
+   `NEXT_PUBLIC_`, logs, screenshots, or chat.
+10. **Record provenance.** Write `SETUP.md` with image digest, dataset revision, tool versions, disk paths, the grade lane used, and the smoke result. *(Human comments to approve the recorded baseline.)*
 
 ## Honesty guardrail (the slice that applies here)
 - **HONEST PROVENANCE starts here.** The environment is the root of every later number — record image digest, dataset revision, and exact versions now, or every score downstream is unverifiable. Flag anything you could not pin (e.g. a `:latest` tag) as unverified.
 - **HELD-OUT integrity is a setup concern.** Download the *full* dataset and let Phase "run" carve the held-out + off-distribution slices; do not pre-filter the dataset to "tasks we like" at setup time — that quietly contaminates the held-out split before evaluation even begins.
 - **Verifier honesty.** The smoke task must show the verifier producing a genuine pass/fail/score with no hardcoded floor and a non-2xx/error surfaced as failure (not silently swallowed). A judge that always returns "pass" is a broken environment, not a passing one.
 - **GSTACK SETUP RECEIPTS:** provider, deployment, devex, and security decisions need explicit receipts when they affect customer/judge usability, secrets, data persistence, or paid services.
+- **NO EARLY CREDENTIAL STOP:** lack of an API key can block a real provider run, but it cannot block
+  deterministic implementation work. A setup pause without adapter/stub boundary, missing-secret UI,
+  blocked-path test, setup doc, and resume command is a skill failure.
 
 ## Gate (heavy / irreversible — explicit approval required)
 The following do NOT run until the human explicitly approves, after seeing the plan + commands + links + size estimates from steps 2 & 5:
@@ -41,6 +54,8 @@ The following do NOT run until the human explicitly approves, after seeing the p
 - `docker pull` / `docker build` of the runner image (GB-scale).
 - Downloading the HF dataset / any model weights to the pinned disk.
 - The first verifier call that spends API money (judge model).
+- Creating provider/API accounts, adding billing, OAuth consent, deployment secrets, or production
+  storage credentials.
 Present each as: what it does, how much disk/$ it costs, the download/console link, the exact command, and the rollback (which path to delete). Dry-run first wherever the tool allows. Proceed one group at a time on explicit "yes".
 
 ## Windows gotchas (flag and handle)

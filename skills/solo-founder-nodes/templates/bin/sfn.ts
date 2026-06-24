@@ -41,6 +41,7 @@ import {
   type GstackRiskLevel,
   type SoloLoopPhase,
 } from "../gstack/gstackBridge";
+import { makeExternalSetupGateReceipt, verifyExternalSetupGateReceipt } from "../setup/externalSetupGate";
 
 const here = dirname(fileURLToPath(import.meta.url)); // templates/bin
 const templates = join(here, "..");                   // templates
@@ -55,6 +56,18 @@ const sh = (cmd: string, args: string[], cwd: string, shell = false) =>
 function flag(args: string[], name: string, fallback?: string) {
   const i = args.indexOf(name);
   return i >= 0 ? args[i + 1] : fallback;
+}
+
+function flags(args: string[], name: string) {
+  const values: string[] = [];
+  for (let i = 0; i < args.length - 1; i++) {
+    if (args[i] === name) values.push(args[i + 1]);
+  }
+  return values;
+}
+
+function csvFlags(args: string[], name: string) {
+  return flags(args, name).flatMap((value) => value.split(",").map((part) => part.trim()).filter(Boolean));
 }
 
 function firstPositional(args: string[], fallback: string) {
@@ -165,6 +178,7 @@ const HELP = `sfn — Solo Founder Nodes local CLI   (run via: npm run sfn -- <c
   control start --project <p> --goal <g> [--budget <n>] [--root <path>]
   control status <loopId>     print durable loop status/resume summary
   control trigger --source <s> --key <k> --project <p> --goal <g> [--budget <n>]
+  setup gate --goal <g> --provider <p> --env <NAME> [--setup-url <url>] [--completed <csv>] [--resume <cmd>] [--out <file>]
   research init --goal <g> --domain <d> [--out <file>]
   research verify [file] [--max-age-days <n>]
   proof init --goal <g> --domain <d> [--out <dir>]
@@ -269,6 +283,35 @@ async function main() {
       }
       console.error("control: start | status <loopId> | trigger");
       process.exit(2);
+    }
+    case "setup": {
+      const sub = rest[0];
+      if (sub !== "gate") {
+        console.error("setup: gate");
+        process.exit(2);
+      }
+      const goal = flag(rest, "--goal");
+      const provider = flag(rest, "--provider");
+      const requiredSecrets = csvFlags(rest, "--env");
+      const resumeCommands = flags(rest, "--resume");
+      if (!goal || !provider || requiredSecrets.length === 0) {
+        console.error("setup gate --goal <g> --provider <p> --env <NAME> [--setup-url <url>] [--completed <csv>] [--resume <cmd>] [--out <file>]");
+        process.exit(2);
+      }
+      const receipt = makeExternalSetupGateReceipt({
+        goal,
+        provider,
+        requiredSecrets,
+        setupUrls: flags(rest, "--setup-url"),
+        completedPrework: csvFlags(rest, "--completed"),
+        resumeCommands,
+      });
+      const verdict = verifyExternalSetupGateReceipt(receipt);
+      const payload = { receipt, verdict };
+      const out = flag(rest, "--out");
+      if (out) writeJson(resolve(out), payload);
+      console.log(JSON.stringify(out ? { out: resolve(out), ...payload } : payload, jbig, 2));
+      process.exit(verdict.ok ? 0 : 1);
     }
     case "research": {
       const sub = rest[0];

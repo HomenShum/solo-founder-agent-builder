@@ -13,6 +13,7 @@ import { SoloControlPlane } from "./control/controlPlane";
 import { make3dAgentResearchPack, top3dComparisonRubric, verifyResearchPack, type ResearchPack } from "./research/researchSpine";
 import { designSkillRegistry, makeDesignFullFlow, recommendDesignSkills, verifyDesignFullFlow, verifyDesignSkillPlan, type DesignFullFlowPlan } from "./design/designSkillBridge";
 import { gstackRoleRegistry, recommendGstackLanes, verifyGstackPlan, type GstackReviewPlan } from "./gstack/gstackBridge";
+import { defaultDeterministicPrework, makeExternalSetupGateReceipt, verifyExternalSetupGateReceipt } from "./setup/externalSetupGate";
 
 let pass = 0;
 let fail = 0;
@@ -162,6 +163,42 @@ async function main() {
   check("graph context counts nodes and edges", graphReceipt.nodeCount === 3 && graphReceipt.edgeCount === 2);
   const plan = graphQueryPlan("what connects composer to scorer?", graphReceipt);
   check("graph query plan is command-shaped", plan.command.includes("graphify query"));
+
+  // ---------------- External setup gate: finish deterministic work before human credentials ----------------
+  console.log("\nExternalSetupGate (no early stop at API-key setup):");
+  const incompleteGate = makeExternalSetupGateReceipt({
+    goal: "Connect Meshy real 3D generation.",
+    provider: "Meshy",
+    requiredSecrets: ["MESHY_API_KEY"],
+    setupUrls: ["https://www.meshy.ai/api"],
+    completedPrework: ["adapter-boundary", "server-side-secret-boundary"],
+    resumeCommands: ["npm run build"],
+    createdAt: "2026-06-23T00:00:00.000Z",
+  });
+  const incompleteGateVerdict = verifyExternalSetupGateReceipt(incompleteGate);
+  check("credential gate rejects early stop before deterministic prework", incompleteGateVerdict.ok === false && incompleteGateVerdict.errors.some((e) => e.includes("missing-secret-ui")));
+
+  const completeGate = makeExternalSetupGateReceipt({
+    goal: "Connect Meshy real 3D generation.",
+    provider: "Meshy",
+    requiredSecrets: ["MESHY_API_KEY"],
+    setupUrls: ["https://www.meshy.ai/api"],
+    completedPrework: [...defaultDeterministicPrework],
+    resumeCommands: ["vercel env pull .env.local", "npm run build", "npm run test:e2e"],
+    createdAt: "2026-06-23T00:00:00.000Z",
+  });
+  const completeGateVerdict = verifyExternalSetupGateReceipt(completeGate);
+  check("credential gate passes only after deterministic prework + resume commands", completeGateVerdict.ok && completeGate.status === "waiting_on_human", completeGateVerdict.errors.join("; "));
+
+  const exposedSecretGate = makeExternalSetupGateReceipt({
+    goal: "Connect Meshy real 3D generation.",
+    provider: "Meshy",
+    requiredSecrets: ["VITE_MESHY_API_KEY"],
+    completedPrework: [...defaultDeterministicPrework],
+    resumeCommands: ["npm run build"],
+  });
+  const exposedSecretVerdict = verifyExternalSetupGateReceipt(exposedSecretGate);
+  check("credential gate rejects client-exposed provider keys", exposedSecretVerdict.ok === false && exposedSecretVerdict.errors.some((e) => e.includes("server-side only")));
 
   // ---------------- Research spine: research-backed implementation gate ----------------
   console.log("\nResearchSpine (research-backed decisions + proof target):");
