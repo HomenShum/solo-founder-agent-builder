@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solo-founder.local/schemas/component-ralph-ledger.schema.json",
+  "title": "Component RALPH Ledger",
+  "type": "object",
+  "required": ["schemaVersion", "ledgerKind", "goal", "domain", "sources", "components", "parentGate"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "ledgerKind": { "const": "component-ralph" },
+    "assetId": { "type": "string" },
+    "goal": { "type": "string", "minLength": 1 },
+    "domain": { "type": "string", "minLength": 1 },
+    "parentLoopId": { "type": "string" },
+    "generatedAt": { "type": "string" },
+    "sources": { "type": "array", "minItems": 3 },
+    "components": { "type": "array", "minItems": 1 },
+    "parentGate": {
+      "type": "object",
+      "required": ["parentCannotPassWithoutRequiredComponentProofs", "noComponentProofNoParentClaim"],
+      "properties": {
+        "parentCannotPassWithoutRequiredComponentProofs": { "const": true },
+        "noComponentProofNoParentClaim": { "const": true }
+      }
+    }
+  }
+}

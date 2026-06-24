@@ -8,6 +8,8 @@ import {
   type SoloLoopRun,
 } from "../loop/ralphLedger";
 import { readSoloEventLog } from "../events/soloEventBus";
+import { judgeComponentLayer, type ComponentJudgeVerdict } from "../component-ralph/componentJudge";
+import { readComponentRalphLedger } from "../component-ralph/componentRalphRunner";
 
 export type FreshContextJudgeVerdictKind =
   | "done"
@@ -28,6 +30,14 @@ export type FreshContextJudgeInput = {
     exists: boolean;
     ok: boolean;
     status: "pass" | "fail" | "missing" | "invalid";
+  };
+  componentLayer: {
+    exists: boolean;
+    required: boolean;
+    ok: boolean;
+    status: ComponentJudgeVerdict["status"];
+    reason: string;
+    missingProofs: string[];
   };
   lastAssistantMessage?: string;
 };
@@ -70,6 +80,7 @@ export function makeFreshContextJudgeInput(input: {
   }
 
   const proofVerdict = readProofVerdict(projectPath);
+  const componentLayer = readComponentLayer(projectPath, loop);
   return {
     schemaVersion: 1,
     projectPath,
@@ -79,6 +90,7 @@ export function makeFreshContextJudgeInput(input: {
     missingReceipts,
     recentEvents: readSoloEventLog(projectPath, input.eventLimit ?? 20),
     proofVerdict,
+    componentLayer,
     lastAssistantMessage: input.lastAssistantMessage,
   };
 }
@@ -142,6 +154,25 @@ export function deterministicFreshContextJudge(input: FreshContextJudgeInput): F
         receipt,
         description: `Create or verify required receipt ${receipt}.`,
       })),
+    });
+  }
+
+  if (["L", "P", "H"].includes(current) && input.componentLayer.required && input.componentLayer.ok !== true) {
+    return verdict({
+      kind: "not_done",
+      confidence: 0.97,
+      currentMilestone: current,
+      reason: input.componentLayer.reason,
+      missingReceipts: input.componentLayer.missingProofs,
+      actions: [
+        {
+          kind: "command",
+          command: input.componentLayer.exists
+            ? "npm run sfn -- component proof --all --project ."
+            : 'npm run sfn -- component init --domain <domain> --goal "<goal>" --project .',
+          description: "Complete required nested Component RALPH proofs before claiming the parent loop is done.",
+        },
+      ],
     });
   }
 
@@ -227,6 +258,25 @@ function verdict(input: {
     shouldRunResearch: input.kind === "needs_research",
     shouldRunVerification: input.kind === "needs_verification",
     blockClaim: true,
+  };
+}
+
+function readComponentLayer(projectPath: string, loop?: SoloLoopRun): FreshContextJudgeInput["componentLayer"] {
+  const ledger = readComponentRalphLedger(projectPath);
+  const result = judgeComponentLayer({
+    projectPath,
+    ledger,
+    goal: loop?.goal,
+    requireFiles: true,
+    requireCompleted: true,
+  });
+  return {
+    exists: !!ledger,
+    required: result.status !== "not_required",
+    ok: result.ok,
+    status: result.status,
+    reason: result.reason,
+    missingProofs: result.missingProofs,
   };
 }
 

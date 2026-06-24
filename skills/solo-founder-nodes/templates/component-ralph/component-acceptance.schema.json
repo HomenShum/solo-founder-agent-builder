@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solo-founder.local/schemas/component-acceptance.schema.json",
+  "title": "Component RALPH Acceptance Gate",
+  "type": "object",
+  "required": ["id", "label", "required", "evidenceRequired", "researchSourceIds"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "label": { "type": "string", "minLength": 1 },
+    "required": { "type": "boolean" },
+    "evidenceRequired": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "researchSourceIds": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+  }
+}

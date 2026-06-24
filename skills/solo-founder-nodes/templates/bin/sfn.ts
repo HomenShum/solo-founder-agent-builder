@@ -92,6 +92,20 @@ import {
   type IntentWorkstreamInput,
 } from "../intent/intentRalph";
 import {
+  componentLedgerPath,
+  componentRalphStages,
+  decomposeComponentsFromText,
+  makeComponentRalphLedger,
+  markComponentStage,
+  readComponentRalphLedger,
+  verifyComponentRalphLedger,
+  type ComponentInput,
+  type ComponentRalphLedger,
+  type ComponentRalphStage,
+  type ComponentRalphStageStatus,
+} from "../component-ralph/componentRalphRunner";
+import { judgeComponentLayer } from "../component-ralph/componentJudge";
+import {
   assertLoopPhase,
   assertPhaseRalphStage,
   completePhaseRalphReceipt,
@@ -197,6 +211,7 @@ function readJson<T>(path: string): T {
 }
 
 function writeJson(path: string, value: unknown) {
+  mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(value, jbig, 2)}\n`, "utf8");
 }
 
@@ -318,6 +333,18 @@ function parseSoloPhase(value?: string): SoloLoopPhase {
   throw new Error(`unsupported phase '${value ?? ""}' (expected one of: ${soloLoopPhases.join(", ")})`);
 }
 
+function parseComponentStage(value?: string): ComponentRalphStage {
+  if (value && componentRalphStages.includes(value as ComponentRalphStage)) return value as ComponentRalphStage;
+  throw new Error(`unsupported component RALPH phase '${value ?? ""}' (expected one of: ${componentRalphStages.join(", ")})`);
+}
+
+function parseComponentStageStatus(value?: string): ComponentRalphStageStatus {
+  const status = value ?? "planned";
+  const allowed: ComponentRalphStageStatus[] = ["planned", "running", "completed", "blocked"];
+  if (allowed.includes(status as ComponentRalphStageStatus)) return status as ComponentRalphStageStatus;
+  throw new Error(`unsupported component RALPH status '${status}' (expected one of: ${allowed.join(", ")})`);
+}
+
 function parseThreeDAssetTarget(value?: string): ThreeDAssetTarget {
   const normalized = value ?? "viewer";
   if (threeDAssetTargets.includes(normalized as ThreeDAssetTarget)) return normalized as ThreeDAssetTarget;
@@ -426,6 +453,12 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   compare top3d [--out <file>]  print/write the 3D provider comparison rubric
   intent ralph-plan --goal <g> [--domain <d>] [--workstreams <file>] [--completed] [--out <file>]
   intent ralph-verify --receipt <file> [--base <dir>] [--no-files]
+  component init --goal <g> [--domain <d>] [--components <file>] [--completed] [--project <path>] [--out <file>]
+  component decompose --input <text> [--domain <d>] [--out <file>]
+  component status [--project <path>] [--ledger <file>]
+  component run --id <component-id> --phase <R|A|L|P|H> [--receipt <path>] [--status planned|running|completed|blocked] [--project <path>] [--ledger <file>]
+  component judge [--id <component-id>] [--project <path>] [--ledger <file>] [--goal <g>] [--no-files]
+  component proof --all [--project <path>] [--ledger <file>] [--goal <g>] [--no-files]
   3d init|plan --goal <g> [--out <file>]
   3d verify --file <file>
   3d compare [--out <file>]
@@ -1347,6 +1380,99 @@ async function main() {
         process.exit(verdict.ok ? 0 : 1);
       }
       console.error("intent: ralph-plan --goal <g> [--domain <d>] [--workstreams <file>] [--completed] [--out <file>] | ralph-verify --receipt <file> [--base <dir>] [--no-files]");
+      process.exit(2);
+    }
+    case "component": {
+      const sub = rest[0];
+      const projectPath = resolve(flag(rest, "--project", ".")!);
+      const ledgerPath = flag(rest, "--ledger") ? resolve(flag(rest, "--ledger")!) : componentLedgerPath(projectPath);
+      if (sub === "init") {
+        const goal = flag(rest, "--goal");
+        if (!goal) {
+          console.error("component init --goal <g> [--domain <d>] [--components <file>] [--completed] [--project <path>] [--out <file>]");
+          process.exit(2);
+        }
+        const componentsPath = flag(rest, "--components");
+        const components = componentsPath ? readJson<ComponentInput[]>(resolve(componentsPath)) : undefined;
+        const ledger = makeComponentRalphLedger({
+          goal,
+          domain: flag(rest, "--domain", "general"),
+          parentLoopId: flag(rest, "--parent-loop-id"),
+          components,
+          status: parseComponentStageStatus(rest.includes("--completed") ? "completed" : flag(rest, "--status", "planned")),
+        });
+        const target = flag(rest, "--out") ? resolve(flag(rest, "--out")!) : ledgerPath;
+        writeJson(target, ledger);
+        console.log(JSON.stringify({ out: target, ledger }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "decompose") {
+        const input = flag(rest, "--input") ?? rest.slice(1).filter((arg, index, args) => !arg.startsWith("--") && !args[index - 1]?.startsWith("--")).join(" ");
+        if (!input.trim()) {
+          console.error("component decompose --input <text> [--domain <d>] [--out <file>]");
+          process.exit(2);
+        }
+        const components = decomposeComponentsFromText({ text: input, domain: flag(rest, "--domain", "general") });
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), components);
+        console.log(JSON.stringify(out ? { out: resolve(out), components } : { components }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "status") {
+        const ledger = readJson<ComponentRalphLedger>(ledgerPath);
+        const verdict = verifyComponentRalphLedger(ledger, { baseDir: projectPath, requireFiles: false, requireCompleted: false });
+        const components = ledger.components.map((component) => ({
+          id: component.componentId,
+          label: component.label,
+          required: component.required,
+          stages: Object.fromEntries(componentRalphStages.map((stage) => [stage, component.ralph[stage].status])),
+        }));
+        console.log(JSON.stringify({ ledger: ledgerPath, verdict, components }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      if (sub === "run") {
+        const componentId = flag(rest, "--id");
+        const rawPhase = flag(rest, "--phase");
+        if (!componentId || !rawPhase) {
+          console.error("component run --id <component-id> --phase <R|A|L|P|H> [--receipt <path>] [--status planned|running|completed|blocked] [--project <path>] [--ledger <file>]");
+          process.exit(2);
+        }
+        const phase = parseComponentStage(rawPhase);
+        const ledger = readJson<ComponentRalphLedger>(ledgerPath);
+        const updated = markComponentStage(ledger, {
+          componentId,
+          stage: phase,
+          receipt: flag(rest, "--receipt"),
+          status: parseComponentStageStatus(flag(rest, "--status", "completed")),
+        });
+        writeJson(ledgerPath, updated);
+        const verdict = verifyComponentRalphLedger(updated, {
+          baseDir: projectPath,
+          requireFiles: false,
+          requireCompleted: false,
+          componentId,
+        });
+        console.log(JSON.stringify({ ledger: ledgerPath, componentId, phase, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      if (sub === "judge" || sub === "proof") {
+        if (sub === "proof" && !rest.includes("--all")) {
+          console.error("component proof --all [--project <path>] [--ledger <file>] [--goal <g>] [--no-files]");
+          process.exit(2);
+        }
+        const ledger = existsSync(ledgerPath) ? readJson<ComponentRalphLedger>(ledgerPath) : readComponentRalphLedger(projectPath);
+        const verdict = judgeComponentLayer({
+          projectPath,
+          ledger,
+          goal: flag(rest, "--goal"),
+          componentId: flag(rest, "--id"),
+          requireFiles: !rest.includes("--no-files"),
+          requireCompleted: !rest.includes("--planned-ok"),
+        });
+        console.log(JSON.stringify({ ledger: ledgerPath, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      console.error("component: init | decompose | status | run | judge | proof");
       process.exit(2);
     }
     case "compare": {

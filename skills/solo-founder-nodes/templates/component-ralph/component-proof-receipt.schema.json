@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solo-founder.local/schemas/component-proof-receipt.schema.json",
+  "title": "Component RALPH Proof Receipt",
+  "type": "object",
+  "required": ["componentId", "stage", "verdict", "evidencePaths"],
+  "properties": {
+    "componentId": { "type": "string", "minLength": 1 },
+    "stage": { "enum": ["R", "A", "L", "P", "H"] },
+    "verdict": { "enum": ["pass", "needs_rework", "fail"] },
+    "evidencePaths": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "missingProofs": { "type": "array", "items": { "type": "string" } },
+    "unsupportedClaims": { "type": "array", "items": { "type": "string" } }
+  }
+}

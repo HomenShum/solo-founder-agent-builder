@@ -40,6 +40,15 @@ import {
   makeIntentRalphReceipt,
   verifyIntentRalphReceipt,
 } from "./intent/intentRalph";
+import {
+  componentLedgerPath,
+  componentRalphStages,
+  decomposeComponentsFromText,
+  makeComponentRalphLedger,
+  markComponentStage,
+  verifyComponentRalphLedger,
+} from "./component-ralph/componentRalphRunner";
+import { judgeComponentLayer } from "./component-ralph/componentJudge";
 import { makeThreeDComparatorRubric, makeThreeDPlan, verifyThreeDPlan } from "./threeD/threeDLoop";
 import { makeThreeDAssetQualityPlan, verifyThreeDAssetQualityReceipt, type ThreeDAssetQualityReceipt } from "./threeD/assetQualityGate";
 import {
@@ -812,6 +821,37 @@ async function main() {
   const relaxedIntentVerdict = verifyIntentRalphReceipt(relaxedIntentRestrictions, { baseDir: proofRoot });
   check("generic intent RALPH rejects agent-owned production/commercial approval", relaxedIntentVerdict.ok === false && relaxedIntentVerdict.errors.some((e) => e.includes("user-owned")));
 
+  console.log("\nComponentRalph (generic nested loop for compositional outputs):");
+  const chairComponents = decomposeComponentsFromText({ text: "wooden chair from an image into a GLB asset", domain: "3d-generation" });
+  check("component decomposition finds production-critical 3D parts", ["chair.seat", "chair.legs", "chair.backrest", "export.glb"].every((id) => chairComponents.some((component) => component.id === id)));
+  const componentLedger = makeComponentRalphLedger({
+    goal: "Generate a functional wooden chair from one product image.",
+    domain: "3d-generation",
+    components: chairComponents,
+    generatedAt: "2026-06-24T00:00:00.000Z",
+    status: "completed",
+  });
+  for (const component of componentLedger.components) {
+    for (const stage of componentRalphStages) {
+      for (const evidencePath of component.ralph[stage].evidencePaths) touch(evidencePath, `# ${component.label} ${stage}\n`);
+    }
+    for (const gate of component.proofGates) {
+      for (const evidencePath of gate.evidencePaths) touch(evidencePath, `{"componentId":"${component.componentId}","gate":"${gate.id}","verdict":"pass"}\n`);
+    }
+  }
+  const componentVerdict = verifyComponentRalphLedger(componentLedger, { baseDir: proofRoot });
+  check("component RALPH passes complete required component receipts", componentVerdict.ok, componentVerdict.errors.join("; "));
+  const missingComponentProof = clone(componentLedger);
+  missingComponentProof.components[0].ralph.P.status = "planned";
+  const missingComponentProofVerdict = verifyComponentRalphLedger(missingComponentProof, { baseDir: proofRoot });
+  check("component RALPH rejects missing nested proof stage", missingComponentProofVerdict.ok === false && missingComponentProofVerdict.missingProofs.some((proof) => proof.includes(".P")));
+  const missingGateLedger = clone(componentLedger);
+  missingGateLedger.components[0].proofGates[0].passed = false;
+  const missingGateVerdict = verifyComponentRalphLedger(missingGateLedger, { baseDir: proofRoot });
+  check("component RALPH rejects incomplete required proof gates", missingGateVerdict.ok === false && missingGateVerdict.missingProofs.some((proof) => proof.includes("proofGate")));
+  const noLedgerJudge = judgeComponentLayer({ projectPath: proofRoot, goal: "prove a coherent 3D asset pipeline" });
+  check("component judge blocks missing ledger for compositional parent proof", noLedgerJudge.ok === false && noLedgerJudge.missingProofs.includes(".solo/ledgers/component-ralph.json"));
+
   console.log("\nThreeDPartResearchRalph (per-component function + assembly research loop):");
   const partResearchReceipt = makeThreeDPartResearchRalphReceipt({
     goal: "Create a coherent eyewear-style 3D asset from screenshot inspiration.",
@@ -1223,6 +1263,41 @@ async function main() {
   const noLoopJudgeRoot = mkdtempSync(join(tmpdir(), `solo-no-loop-judge-${process.pid}-`));
   const noLoopJudge = judgeCurrentLoop({ projectPath: noLoopJudgeRoot, lastAssistantMessage: "done" });
   check("fresh-context judge blocks completion without loop-state", noLoopJudge.verdict.verdict === "blocked" && noLoopJudge.verdict.blockClaim && noLoopJudge.verdict.missingReceipts.includes(".solo/loop-state.json"));
+
+  const noComponentLedgerRoot = mkdtempSync(join(tmpdir(), `solo-no-component-ledger-${process.pid}-`));
+  const noComponentLedger = createRalphLedger({ repoPath: noComponentLedgerRoot, goal: "prove a coherent 3D asset pipeline", now: "2026-06-24T00:00:00.000Z" });
+  const noComponentReceipt = (relative: string, body = "ok") => {
+    const abs = join(noComponentLedger.paths.soloDir, relative);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, body, "utf8");
+    return relative;
+  };
+  completeRalphMilestone(noComponentLedgerRoot, "R", [
+    noComponentReceipt("receipts/R-reality/capability-spec.json"),
+    noComponentReceipt("receipts/R-reality/research-spine.json"),
+    noComponentReceipt("receipts/R-reality/graph-context.json"),
+  ]);
+  completeRalphMilestone(noComponentLedgerRoot, "A", [
+    noComponentReceipt("receipts/A-acceptance-bar/benchmark-choice.json"),
+    noComponentReceipt("receipts/A-acceptance-bar/rubric.json"),
+    noComponentReceipt("receipts/A-acceptance-bar/heldout-split-policy.json"),
+  ]);
+  completeRalphMilestone(noComponentLedgerRoot, "L", [
+    noComponentReceipt("receipts/L-live-build/agent-api-contract.json"),
+    noComponentReceipt("receipts/L-live-build/design-brief.md"),
+    noComponentReceipt("receipts/L-live-build/build-note.md"),
+  ]);
+  startRalphMilestone(noComponentLedgerRoot, "P");
+  completeRalphMilestone(noComponentLedgerRoot, "P", [
+    noComponentReceipt("receipts/P-proof-run/fresh-room-receipt.json"),
+    noComponentReceipt("proof-verdict.json", "{\"ok\":true}"),
+  ]);
+  const missingComponentLedgerJudge = judgeCurrentLoop({ projectPath: noComponentLedgerRoot, lastAssistantMessage: "done" });
+  check(
+    "fresh-context judge blocks 3D parent proof without component ledger",
+    missingComponentLedgerJudge.verdict.verdict === "not_done" && missingComponentLedgerJudge.verdict.missingReceipts.includes(".solo/ledgers/component-ralph.json"),
+    missingComponentLedgerJudge.verdict.reason,
+  );
 
   const judgeRoot = mkdtempSync(join(tmpdir(), `solo-judge-${process.pid}-`));
   const judgeLedger = createRalphLedger({ repoPath: judgeRoot, goal: "prove a coherent 3D asset pipeline", now: "2026-06-24T00:00:00.000Z" });

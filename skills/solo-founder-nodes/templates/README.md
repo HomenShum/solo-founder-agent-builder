@@ -51,6 +51,9 @@ npm run sfn -- fresh-user init --case fresh-3d-001 --prompt "I want a 3D model a
 npm run sfn -- trust verify --receipt trust-root-receipt.json
 npm run sfn -- intent ralph-plan --goal "build a hiring operations agent" --domain workflow-ops-agent --out intent-ralph.json
 npm run sfn -- intent ralph-verify --receipt intent-ralph.json --base docs/proof
+npm run sfn -- component init --goal "build a coherent 3D asset app" --domain 3d-generation --project .
+npm run sfn -- component decompose --input "wooden chair from image" --domain 3d-generation --out component-tree.json
+npm run sfn -- component proof --all --project .
 npm run sfn -- 3d plan --goal "first-party picture/text to 3D app"
 npm run sfn -- 3d part-research-plan --goal "coherent eyewear 3D asset" --out part-research.json  # 3D-specific adapter
 npm run sfn -- 3d part-research-verify --receipt part-research.json --base docs/proof
@@ -107,6 +110,9 @@ npm run sfn -- ledger verify <runId>        # re-verify a run's hash-chain (tamp
   with research, alignment/dependencies, live-build plan, proof evidence, and hardening labels. This
   is the default nested loop for all domains; 3D, engineering, design, and other adapters add stricter
   checks on top.
+- **`component-ralph/` - generic Component RALPH**: creates `.solo/ledgers/component-ralph.json`
+  for compositional outputs and blocks parent L/P/H claims until production-critical child components
+  have R/A/L/P/H receipts and proof gates. This is generic; 3D part research is one adapter on top.
 - **`agentApi/` - Agent-ready API gate**: semantic tool contracts, provider-schema parity, and
   structured failure/recovery checks.
 - **`proof/` - Fresh-room and full proof receipts**: live browser proof receipts with trace/video/screenshots,

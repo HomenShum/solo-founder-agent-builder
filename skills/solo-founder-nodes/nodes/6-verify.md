@@ -42,7 +42,11 @@ cost/latency receipts, memory/taste export receipts, approval/dry-run receipts, 
 provenance, and the linked design-quality receipt. Run
 `npm run sfn -- chat-ux verify --receipt <agent-chat-ux-receipt.json>`. A generic chat-only surface
 or hidden job runner downgrades the claim to UNVERIFIED.
-6c3. **Seal 3D asset quality.** For every 3D asset claim beyond a personal-research scaffold, write an
+6c3. **Seal Component RALPH proofs.** When `.solo/ledgers/component-ralph.json` exists, or the goal is
+compositional, run `npm run sfn -- component proof --all --project .`. The parent proof cannot pass
+while production-critical components are missing Reality, Acceptance, Live Build, Proof, Harden, or
+required proof-gate evidence. A final screenshot or rendered artifact is not enough.
+6c4. **Seal 3D asset quality.** For every 3D asset claim beyond a personal-research scaffold, write an
 `asset-quality-receipt.json` and run
 `npm run sfn -- 3d quality-verify --receipt <asset-quality-receipt.json>`. Prototype claims need
 semantic part graph, mesh stats, GLB/glTF export, viewer/reopen proof, and screenshots. Industry-grade
@@ -82,6 +86,9 @@ The prose in **Procedure** (steps 2-6) makes the in-app transfer doctrine human-
 - Never claim "superior agent chat UX", "production agent workspace", or "VisualLabs-style chat"
   without a passing `agent-chat-ux` receipt that proves artifacts, tool/job status, costs, approvals,
   analytics, provenance, traces, and memory/taste export in the actual UI.
+- Never claim a compositional product is done without a passing `component proof --all` verdict. Parent
+  proof is blocked by missing component ledgers, missing child R/A/L/P/H receipts, or incomplete
+  required component proof gates.
 - Never claim "coherent 3D asset", "game-ready", "CAD-ready", "marketplace-ready", "prototype", or
   "industry-grade" without a passing `asset-quality` receipt. OBJ-only proof is personal-research
   scaffold evidence at most.

@@ -81,6 +81,15 @@ and hardening/blocked-claim receipts before the skill can claim completion. Doma
 [`references/intent-ralph.md`](references/intent-ralph.md); implementation:
 [`templates/intent/intentRalph.ts`](templates/intent/intentRalph.ts).
 
+**Component RALPH:** if the requested deliverable is compositional, run
+`npm run sfn -- component init --goal "<goal>" --domain <domain> --project .` and then
+`npm run sfn -- component proof --all --project .`. Each production-critical component needs its own
+Reality, Acceptance, Live Build, Proof, and Harden receipts. The fresh-context judge blocks parent
+`L/P/H` claims when a required component ledger/proof is missing. Do not decompose tiny helper code;
+do decompose parts that affect user value, exported artifacts, external standards, or trust/safety
+risk. Spec: [`references/component-ralph.md`](references/component-ralph.md); implementation:
+[`templates/component-ralph/`](templates/component-ralph/). Doctrine: no component proof, no parent claim.
+
 **Research spine:** at `discover`, create or refresh `research-spine.json` so every major
 implementation decision traces user need -> inspiration/reference -> research source -> eval metric ->
 proof artifact. From `build` onward, block uncited decisions; from `verify` onward, block supported

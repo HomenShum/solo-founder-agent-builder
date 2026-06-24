@@ -154,6 +154,19 @@ and `H` hardening/blocked-claim receipts. Domain adapters such as 3D part resear
 checks; they do not replace the generic intent loop. Doctrine: [`references/intent-ralph.md`](references/intent-ralph.md);
 copyable implementation: [`templates/intent/intentRalph.ts`](templates/intent/intentRalph.ts).
 
+**Component RALPH (nested proof for compositional outputs):** if the output is compositional, the
+agent must create `.solo/ledgers/component-ralph.json` with `npm run sfn -- component init --goal
+"<goal>" --domain <domain> --project .`, then prove each production-critical component through its
+own `R/A/L/P/H` receipts. This applies to 3D assets, multi-tab workbooks, multi-file reports, UI
+systems, agent harnesses, data pipelines, and simulations. Do not decompose tiny implementation
+details. Decompose only pieces that affect user value, have external quality standards, can
+independently fail, are exported deliverables, or create trust/safety/performance risk. Stop/idle/final-answer
+hooks call `judge current`, and the judge blocks parent `L/P/H` claims when the component ledger is
+missing or any required child proof is incomplete. Use `npm run sfn -- component proof --all --project
+.` before claiming parent proof. Doctrine: [`references/component-ralph.md`](references/component-ralph.md);
+copyable implementation: [`templates/component-ralph/`](templates/component-ralph/). Doctrine:
+**No component proof, no parent claim.**
+
 ## Research spine (required for research-backed implementation)
 
 The agent must not turn a founder's domain prompt into unsupported architecture or product claims. At

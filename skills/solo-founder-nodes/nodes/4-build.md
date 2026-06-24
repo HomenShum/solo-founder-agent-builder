@@ -28,7 +28,14 @@ implementation. Copy the required workspace surfaces into the Component Contract
 artifact rail/workspace, tool/job timeline, cost/latency ledger, approval console, analytics loopback,
 provenance, trace export, and memory/taste export. A generic chat box around a hidden runner is not an
 acceptable app layer.
-0e. **Gate 3D asset quality before 3D code.** If the deliverable claims coherent, prototype,
+0e. **Gate compositional outputs through Component RALPH.** If the deliverable has production-critical
+parts that can independently fail (3D assets, workbooks, UI systems, agent harnesses, data pipelines,
+simulations, exported artifacts), create `.solo/ledgers/component-ralph.json` with
+`npm run sfn -- component init --goal "<goal>" --domain <domain> --project .`. Each component needs
+its own Reality, Acceptance, Live Build, Proof, and Harden receipts. Do not decompose tiny helper code;
+do decompose exported parts, external-standard boundaries, runtime surfaces, proof runners, and
+trust/safety/performance risk carriers.
+0f. **Gate 3D asset quality before 3D code.** If the deliverable claims coherent, prototype,
 game/CAD/customer, or industry-grade 3D assets, run
 `npm run sfn -- 3d quality-plan --goal "<goal>" --target <target> --claim <level>` before mesh/export
 work. Copy the required semantic part graph, mesh stats, topology, UV, PBR, GLB/glTF, reopen, wireframe,

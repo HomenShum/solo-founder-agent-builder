@@ -12,6 +12,7 @@ Every target repo should converge on these local files:
 - `.solo/events.jsonl` - normalized `SoloEvent` stream from host hooks and CLI commands.
 - `.solo/memory.db` - safe project memory and recall, never held-out gold.
 - `.solo/receipts/` - milestone receipts.
+- `.solo/ledgers/component-ralph.json` - nested component receipts for compositional products.
 - `.solo/proof-verdict.json` - the proof pass/fail boundary.
 - `.solo/rework-ledger.md` - what was replaced, why, and what evidence survived.
 
@@ -56,15 +57,24 @@ npm run sfn -- judge current --project .
 npm run sfn -- judge current --project . --on-stop
 ```
 
-The judge reads only durable evidence: loop state, RALPH required receipts, recent events, and
-proof-verdict state. It returns:
+The judge reads only durable evidence: loop state, RALPH required receipts, recent events,
+component-ledger status for compositional outputs, and proof-verdict state. It returns:
 
 - `done` only when the whole RALPH loop is complete.
 - `needs_research` when discover/research receipts are missing.
 - `needs_verification` when proof receipts or `proof-verdict.json` are missing/failing.
-- `not_done` when a milestone is locally satisfied but the whole loop has not completed.
+- `not_done` when a milestone is locally satisfied but the whole loop has not completed, or when a
+  compositional parent `L/P/H` claim is missing Component RALPH proofs.
 - `blocked` when there is no loop save file or an explicit blocker exists.
 
 Final-answer hooks should block when `blockClaim: true`. That is how the skill forces a coding agent
 to continue discover -> benchmark -> setup -> build -> adapter -> verify -> iterate instead of
 ending at a plausible transcript.
+
+For compositional products, run:
+
+```bash
+npm run sfn -- component proof --all --project .
+```
+
+The clean rule is: no component proof, no parent claim.
