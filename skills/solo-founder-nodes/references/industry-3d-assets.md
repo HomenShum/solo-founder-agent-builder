@@ -12,6 +12,12 @@ building or verifying it:
   report, PBR maps, GLB/glTF export, DCC/viewer reopen proof, wireframe and UV screenshots, benchmark
   scorecard, and, for games/characters/scenes/marketplace work, LOD/collision/pivot evidence.
 
+Run [`part-research-ralph.md`](part-research-ralph.md) before this quality gate when a task starts
+from reference media or first-principles decomposition. The part-research gate proves each component's
+function, assembly interfaces, local geometry/material plan, proof evidence, and hardening labels.
+This quality gate then proves whole-asset mesh/material/export quality and benchmark performance.
+Passing one does not replace the other.
+
 Research anchors:
 
 - [P3D-Bench](https://arxiv.org/abs/2606.11152) evaluates parametric/code-based 3D generation on

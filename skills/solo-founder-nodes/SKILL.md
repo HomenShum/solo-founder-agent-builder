@@ -97,7 +97,14 @@ judge can use it end to end. Block unverified exact extraction of protected soci
 Educational purpose is context, not automatic permission. Support user-owned/licensed/public-domain
 media, real-world factual references, or transformed inspiration only after a component tree,
 functional geometry/material map, protected-expression filter, originality delta, and provenance
-receipt exist. For personal research scaffolds, use `npm run sfn -- 3d make-asset ...`; it creates a
+receipt exist. Then run part-research RALPH with
+`npm run sfn -- 3d part-research-plan ...` and
+`npm run sfn -- 3d part-research-verify ...` so every component has researched function, assembly
+interfaces, local geometry/material, proof evidence, and blocked-claim hardening before the asset can
+be called coherent. Implementation:
+[`templates/threeD/partResearchRalph.ts`](templates/threeD/partResearchRalph.ts); doctrine:
+[`references/part-research-ralph.md`](references/part-research-ralph.md). For personal research
+scaffolds, use `npm run sfn -- 3d make-asset ...`; it creates a
 deterministic OBJ proof artifact from filtered spec/text and must remain personal-research-only, not
 production-ready, not human-use approved, and not an exact replica export. Commercial/deployment use
 is a user-owned external decision after their due diligence; the agent must not claim to approve it.

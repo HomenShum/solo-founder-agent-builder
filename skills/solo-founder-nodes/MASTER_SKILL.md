@@ -171,7 +171,16 @@ modes are user-owned or licensed media, public-domain/compatible-license media, 
 object reference, or transformed inspiration with similarity/provenance receipts. Before generation,
 produce a component tree, functional geometry/material map, protected-expression filter, and
 originality delta so the output is an original design from abstracted components. Use
-`npm run sfn -- 3d plan ...` and `npm run sfn -- 3d verify ...`.
+`npm run sfn -- 3d plan ...` and `npm run sfn -- 3d verify ...`. Then run the
+**part-research RALPH** gate before any mesh is treated as coherent:
+`npm run sfn -- 3d part-research-plan --goal "<goal>" --components <component-tree.json> --out part-research.json`
+and `npm run sfn -- 3d part-research-verify --receipt part-research.json`. This nested loop expands
+each component into `R` research, `A` assembly/interface constraints, `L` local geometry/material,
+`P` proof evidence, and `H` hardening/blocked-claim receipts. The output cannot claim a coherent
+product, CAD, game, character, or scene asset if any part lacks sources, functional requirements,
+composition interfaces, evidence files, or unsupported-claim labels. Doctrine:
+[`references/part-research-ralph.md`](references/part-research-ralph.md); copyable implementation:
+[`templates/threeD/partResearchRalph.ts`](templates/threeD/partResearchRalph.ts).
 For personal research scaffolds, use `npm run sfn -- 3d make-asset ...` to create a deterministic OBJ
 from a filtered functional spec or text prompt. This asset is proof material for the loop: mark it
 personal-research-only, not production-ready, not human-use approved, and not an exact replica export.

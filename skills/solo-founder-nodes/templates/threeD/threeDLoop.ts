@@ -72,7 +72,7 @@ export function makeThreeDPlan(input: {
       lane("reference-media-intake", "Accept screenshots, social/video links, textbook images, and movie/game references as reference media, not automatically as owned source assets.", ["U.S. Copyright Office AI reports", "platform terms", "source metadata"], ["source-manifest", "media-origin-receipt"]),
       lane("brush-source-selection", "Let the user brush/select the target object before generation so the crop becomes the source target and surrounding media remains context.", ["Lovart-style touch edit workflows", "segmentation/matting UX", "source provenance"], ["brush-selection-mask", "source-crop-receipt", "background-context-note"]),
       lane("rights-provenance-gate", "Decide whether the requested output is user-owned/licensed, public-domain/CC-compatible, real-world factual reference, transformative inspiration, or blocked exact extraction.", ["fair-use four factors", "license receipts", "similarity review"], ["rights-provenance-receipt", "allowed-use-mode", "blocked-extraction-state"]),
-      lane("first-principles-decomposition", "Break the reference down into functional parts, geometric primitives, materials, constraints, and original design deltas before generation.", ["P3D-Bench", "idea-expression distinction", "useful-article/functionality review"], ["component-breakdown", "functional-geometry-map", "originality-delta", "protectable-expression-filter", "educational-purpose-note"]),
+      lane("first-principles-decomposition", "Break the reference down into functional parts, geometric primitives, materials, constraints, and original design deltas before generation; then run a nested per-part RALPH loop so every component has researched function, assembly, geometry, proof, and hardening receipts.", ["PartNet", "P3D-Bench", "Text2CAD", "HistCAD", "idea-expression distinction", "useful-article/functionality review"], ["component-breakdown", "functional-geometry-map", "part-research-ralph", "composition-constraint-graph", "originality-delta", "protectable-expression-filter", "educational-purpose-note"]),
       lane("capture-intake", "Accept text, one image, multi-view images, and video-frame references.", ["CO3D", "Objaverse"], ["input-manifest", "capture-coverage-receipt"]),
       lane("coverage-scoring", "Warn when user inputs cannot support the requested 3D quality.", ["COLMAP", "VGGT", "DUSt3R", "MASt3R"], ["coverage-score", "needs-more-capture-state"]),
       lane("multiview-reconstruction", "Recover camera/depth/point structure when enough references exist.", ["COLMAP", "VGGT", "DUSt3R", "MASt3R"], ["camera-pose-receipt", "point-cloud-or-depth-artifact"]),
@@ -138,8 +138,13 @@ export function verifyThreeDPlan(plan: ThreeDPlan): ThreeDPlanVerdict {
     errors.push("3D plan must require a rights-provenance receipt for reference-media requests");
   }
   const decompositionLane = plan.firstPartyLanes.find((lane) => lane.id === "first-principles-decomposition");
-  if (!decompositionLane?.proofRequired.includes("component-breakdown") || !decompositionLane?.proofRequired.includes("originality-delta")) {
-    errors.push("3D plan must require first-principles component breakdown and originality delta before generation");
+  if (
+    !decompositionLane?.proofRequired.includes("component-breakdown")
+    || !decompositionLane?.proofRequired.includes("originality-delta")
+    || !decompositionLane?.proofRequired.includes("part-research-ralph")
+    || !decompositionLane?.proofRequired.includes("composition-constraint-graph")
+  ) {
+    errors.push("3D plan must require first-principles component breakdown, part-research RALPH, composition graph, and originality delta before generation");
   }
   const brushLane = plan.firstPartyLanes.find((lane) => lane.id === "brush-source-selection");
   if (!brushLane?.proofRequired.includes("source-crop-receipt")) {

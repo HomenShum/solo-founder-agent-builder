@@ -37,6 +37,11 @@ import {
 } from "./phase/phaseRalph";
 import { makeThreeDComparatorRubric, makeThreeDPlan, verifyThreeDPlan } from "./threeD/threeDLoop";
 import { makeThreeDAssetQualityPlan, verifyThreeDAssetQualityReceipt, type ThreeDAssetQualityReceipt } from "./threeD/assetQualityGate";
+import {
+  makeThreeDPartResearchRalphReceipt,
+  partResearchRalphStages,
+  verifyThreeDPartResearchRalphReceipt,
+} from "./threeD/partResearchRalph";
 import { makeResearchOnlyAsset, verifyResearchAssetManifest } from "./threeD/researchAssetMaker";
 import { makeEngineeringInventionHarness, verifyEngineeringInventionHarness } from "./engineering/engineeringInventionHarness";
 import { makeFirstPrinciplesDeconstructionReceipt, verifyFirstPrinciplesDeconstructionReceipt } from "./engineering/firstPrinciplesDeconstructionReceipt";
@@ -755,6 +760,8 @@ async function main() {
   });
   const threeDPlanVerdict = verifyThreeDPlan(threeDPlan);
   check("3D plan keeps providers as comparator/fallback only", threeDPlanVerdict.ok && threeDPlan.providerPolicy.defaultRole === "comparator_or_fallback_only", threeDPlanVerdict.errors.join("; "));
+  const decompositionLane = threeDPlan.firstPartyLanes.find((lane) => lane.id === "first-principles-decomposition");
+  check("3D plan requires nested part-research RALPH before generation", !!decompositionLane?.proofRequired.includes("part-research-ralph") && !!decompositionLane?.proofRequired.includes("composition-constraint-graph"));
   const badThreeDPlan = clone(threeDPlan);
   badThreeDPlan.firstPartyLanes = badThreeDPlan.firstPartyLanes.filter((lane) => lane.id !== "multiview-reconstruction");
   const badThreeDPlanVerdict = verifyThreeDPlan(badThreeDPlan);
@@ -766,6 +773,39 @@ async function main() {
   const threeDComparator = makeThreeDComparatorRubric();
   check("3D comparator scores first-party and provider outputs on same rubric", threeDComparator.providers.length >= 4 && threeDComparator.passRule.includes("not the default product architecture"));
   check("3D comparator stays a 100-point rubric", threeDComparator.metrics.reduce((sum, metric) => sum + metric.points, 0) === 100);
+
+  console.log("\nThreeDPartResearchRalph (per-component function + assembly research loop):");
+  const partResearchReceipt = makeThreeDPartResearchRalphReceipt({
+    goal: "Create a coherent eyewear-style 3D asset from screenshot inspiration.",
+    objectCategory: "eyewear",
+    generatedAt: "2026-06-24T00:00:00.000Z",
+    status: "completed",
+  });
+  for (const loop of partResearchReceipt.partLoops) {
+    for (const stage of partResearchRalphStages) {
+      for (const evidencePath of loop.stages[stage].evidencePaths) {
+        touch(evidencePath, `# ${loop.label} ${stage}\n`);
+      }
+    }
+  }
+  const partResearchVerdict = verifyThreeDPartResearchRalphReceipt(partResearchReceipt, { baseDir: proofRoot });
+  check(
+    "part-research RALPH passes complete per-part research, assembly, geometry, proof, and hardening evidence",
+    partResearchVerdict.ok && partResearchReceipt.partLoops.every((loop) => partResearchRalphStages.every((stage) => loop.stages[stage].status === "completed")),
+    partResearchVerdict.errors.join("; "),
+  );
+  const missingPartSources = clone(partResearchReceipt);
+  missingPartSources.partLoops[0].researchSourceIds = [];
+  const missingPartSourcesVerdict = verifyThreeDPartResearchRalphReceipt(missingPartSources, { baseDir: proofRoot });
+  check("part-research RALPH rejects a component without research sources", missingPartSourcesVerdict.ok === false && missingPartSourcesVerdict.errors.some((e) => e.includes("research sources")));
+  const plannedStageReceipt = clone(partResearchReceipt);
+  plannedStageReceipt.partLoops[0].stages.P.status = "planned";
+  const plannedStageVerdict = verifyThreeDPartResearchRalphReceipt(plannedStageReceipt, { baseDir: proofRoot });
+  check("part-research RALPH rejects uncompleted nested proof stage", plannedStageVerdict.ok === false && plannedStageVerdict.errors.some((e) => e.includes("stage P")));
+  const missingInterfaceReceipt = clone(partResearchReceipt);
+  missingInterfaceReceipt.partLoops[0].compositionInterfaces = [];
+  const missingInterfaceVerdict = verifyThreeDPartResearchRalphReceipt(missingInterfaceReceipt, { baseDir: proofRoot });
+  check("part-research RALPH rejects missing part composition interface", missingInterfaceVerdict.ok === false && missingInterfaceVerdict.errors.some((e) => e.includes("composition interface")));
 
   console.log("\nThreeDAssetQualityGate (industry-grade asset bar):");
   const assetQualityPlan = makeThreeDAssetQualityPlan({

@@ -103,6 +103,13 @@ import {
   type ThreeDAssetTarget,
 } from "../threeD/assetQualityGate";
 import {
+  makeThreeDPartResearchRalphReceipt,
+  verifyThreeDPartResearchRalphReceipt,
+  type PartResearchComponentInput,
+  type PartResearchStageStatus,
+  type ThreeDPartResearchRalphReceipt,
+} from "../threeD/partResearchRalph";
+import {
   makeResearchOnlyAsset,
   verifyResearchAssetManifest,
   type ResearchAssetManifest,
@@ -413,6 +420,8 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   3d init|plan --goal <g> [--out <file>]
   3d verify --file <file>
   3d compare [--out <file>]
+  3d part-research-plan --goal <g> [--object-category <c>] [--components <file>] [--completed] [--out <file>]
+  3d part-research-verify --receipt <file> [--base <dir>] [--no-files]
   3d quality-plan --goal <g> [--target viewer|game|cad|character|scene|marketplace] [--claim personal-research-scaffold|prototype|industry-grade] [--industry-grade] [--out <file>]
   3d quality-verify --receipt <file> [--base <dir>]
   3d make-asset --goal <g> --project-id <id> --out-dir <dir> [--functional-spec <file>] [--deconstruction-receipt <file>]
@@ -1340,6 +1349,41 @@ async function main() {
         console.log(JSON.stringify(out ? { out: resolve(out), rubric } : rubric, jbig, 2));
         process.exit(0);
       }
+      if (sub === "part-research-plan" || sub === "part-ralph-plan") {
+        const goal = flag(rest, "--goal");
+        if (!goal) {
+          console.error("3d part-research-plan --goal <g> [--object-category <c>] [--components <file>] [--completed] [--out <file>]");
+          process.exit(2);
+        }
+        const componentsPath = flag(rest, "--components");
+        const components = componentsPath ? readJson<PartResearchComponentInput[]>(resolve(componentsPath)) : undefined;
+        const status: PartResearchStageStatus = rest.includes("--completed") ? "completed" : "planned";
+        const receipt = makeThreeDPartResearchRalphReceipt({
+          goal,
+          objectCategory: flag(rest, "--object-category"),
+          components,
+          status,
+        });
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), receipt);
+        console.log(JSON.stringify(out ? { out: resolve(out), receipt } : receipt, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "part-research-verify" || sub === "part-ralph-verify") {
+        const receiptPath = flag(rest, "--receipt");
+        if (!receiptPath) {
+          console.error("3d part-research-verify --receipt <file> [--base <dir>] [--no-files]");
+          process.exit(2);
+        }
+        const abs = resolve(receiptPath);
+        const receipt = readJson<ThreeDPartResearchRalphReceipt>(abs);
+        const verdict = verifyThreeDPartResearchRalphReceipt(receipt, {
+          baseDir: flag(rest, "--base") ? resolve(flag(rest, "--base")!) : dirname(abs),
+          requireFiles: !rest.includes("--no-files"),
+        });
+        console.log(JSON.stringify({ receipt: abs, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
       if (sub === "quality-plan" || sub === "asset-quality-plan") {
         const goal = flag(rest, "--goal");
         if (!goal) {
@@ -1411,7 +1455,7 @@ async function main() {
         console.log(JSON.stringify({ manifest: abs, verdict }, jbig, 2));
         process.exit(verdict.ok ? 0 : 1);
       }
-      console.error("3d: init|plan --goal <g> [--out <file>] | verify --file <file> | compare [--out <file>] | quality-plan --goal <g> [--target <target>] [--claim <level>] [--out <file>] | quality-verify --receipt <file> [--base <dir>] | make-asset --goal <g> --project-id <id> --out-dir <dir> [--functional-spec <file>] [--deconstruction-receipt <file>] | verify-asset --manifest <file> [--base <dir>]");
+      console.error("3d: init|plan --goal <g> [--out <file>] | verify --file <file> | compare [--out <file>] | part-research-plan --goal <g> [--components <file>] [--completed] [--out <file>] | part-research-verify --receipt <file> [--base <dir>] [--no-files] | quality-plan --goal <g> [--target <target>] [--claim <level>] [--out <file>] | quality-verify --receipt <file> [--base <dir>] | make-asset --goal <g> --project-id <id> --out-dir <dir> [--functional-spec <file>] [--deconstruction-receipt <file>] | verify-asset --manifest <file> [--base <dir>]");
       process.exit(2);
     }
     case "engineering": {
