@@ -103,6 +103,11 @@ function validateProofArtifactFile(runDir: string, artifact: ProofArtifact): str
   } else if (artifact.kind === "terminal-transcript") {
     expectExt([".txt", ".log", ".md"]);
     if (size < 100) errors.push(`${label} transcript is too small to show a real session`);
+  } else if (artifact.kind === "recording-audit") {
+    expectExt([".md", ".json", ".txt"]);
+    const text = readFileSync(absPath, "utf8");
+    if (size < 200) errors.push(`${label} recording audit is too small to be useful`);
+    if (!/frame/i.test(text) || !/video/i.test(text)) errors.push(`${label} must mention video and frame inspection`);
   } else if (["provider-costs", "scorecard", "decision-log"].includes(artifact.kind)) {
     expectExt([".md", ".json", ".txt", ".csv"]);
     if (size < 50) errors.push(`${label} receipt is too small to be useful`);

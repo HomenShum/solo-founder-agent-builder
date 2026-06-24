@@ -38,7 +38,8 @@ export interface ProofArtifact {
     | "generated-asset"
     | "provider-costs"
     | "scorecard"
-    | "decision-log";
+    | "decision-log"
+    | "recording-audit";
   description: string;
   required: boolean;
   path?: string;
@@ -234,6 +235,7 @@ export function make3dAgentResearchPack(args: {
 
   const proofArtifacts: ProofArtifact[] = [
     { id: "artifact-fullscreen-video", kind: "fullscreen-video", required: true, description: "Full-screen recording of the fresh founder-style session." },
+    { id: "artifact-recording-audit", kind: "recording-audit", required: true, description: "Visual inspection receipt for videos, rejected recordings, and sampled frame checks." },
     { id: "artifact-terminal-transcript", kind: "terminal-transcript", required: true, description: "Terminal transcript from the coding-agent session." },
     { id: "artifact-playwright-trace", kind: "playwright-trace", required: true, description: "Playwright trace proving real UI upload/chat/view/export." },
     { id: "artifact-playwright-video", kind: "playwright-video", required: true, description: "Browser video for the real app flow." },
@@ -333,7 +335,7 @@ export function make3dAgentResearchPack(args: {
       status: "supported",
       risk: "major",
       sourceIds: ["webarena", "osworld", "rigorous-agent-benchmarks", "vercel"],
-      proofArtifactIds: ["artifact-fullscreen-video", "artifact-terminal-transcript", "artifact-playwright-trace", "artifact-deployed-url", "artifact-generated-assets"],
+      proofArtifactIds: ["artifact-fullscreen-video", "artifact-recording-audit", "artifact-terminal-transcript", "artifact-playwright-trace", "artifact-deployed-url", "artifact-generated-assets"],
     },
     {
       id: "claim-cad-native-stretch",
