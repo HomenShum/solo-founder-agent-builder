@@ -80,15 +80,16 @@ Present each as: what it does, how much disk/$ it costs, the download/console li
 
 ## Serving the models — Inference.ai (recommended)
 
-Rather than host models locally, serve them via **Inference.ai** (the Super Solo Hack Day host), which
-exposes an **OpenAI-compatible** endpoint (validated: `gpt-5.4` returns a normal completion). Point the
+Rather than host models locally, use **Inference.ai** or another provider approved by the eval policy
+and the user's budget. The only setup assumption this skill makes is an OpenAI-compatible endpoint. Point the
 harness at it with a base_url override — for any OpenAI-SDK harness that is simply:
 
 ```
-OPENAI_BASE_URL=https://<your-inference.ai-endpoint>/v1
-OPENAI_API_KEY=<your Inference.ai key>
+OPENAI_BASE_URL=https://<your-provider-endpoint>/v1
+OPENAI_API_KEY=<your provider key>
+MODEL_ID=<approved model id>
 ```
 
-For the dogfooded NodeRoom adapter, pass the served model id (e.g. `gpt-5.4`) plus the OpenAI-compatible
+For the dogfooded NodeRoom adapter, pass the served model id plus the OpenAI-compatible
 base_url + key. Gate the key/spend with the user (this phase is hard-gated). This keeps `setup` light
 (no local GPU/model hosting) and lets `iterate` run the tuned / held-out / generalization slices cheaply.

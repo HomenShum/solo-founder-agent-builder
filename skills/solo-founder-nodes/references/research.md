@@ -6,9 +6,9 @@ spine verifies that each major product/architecture decision is backed by curren
 references, eval metrics, and proof artifacts.
 
 The [honest-lane doctrine](honest-lane.md) was **not** derived from the literature — it was hard-won
-from one overfit benchmark session (a fleet drove a benchmark to 0.96 via answer-keys while true
-held-out capability was ~0.008), then found to match recent eval-integrity research almost
-one-to-one. This file maps each doctrine point to **verified** arXiv work and the substrate
+from overfit benchmark sessions where selected/family-writer paths produced high scores while
+clean/general lanes were far lower, then found to match recent eval-integrity research almost
+one-to-one. See `docs/PUBLIC_CLAIM_PROOF.md` before quoting exact public numbers. This file maps each doctrine point to **verified** arXiv work and the substrate
 mechanism (S9–S16) it justifies.
 
 > **Provenance applied to itself.** Only arXiv ids confirmed verbatim in search results are cited as

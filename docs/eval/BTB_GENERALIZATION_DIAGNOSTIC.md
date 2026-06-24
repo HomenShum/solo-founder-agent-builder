@@ -7,6 +7,9 @@ otherwise it is overfitting and must be reverted.
 
 Authored from the sweep data in `docs/eval/bankertoolbench-nodeagent-full-sweep-pass*.json`.
 
+2026-06 public-copy correction: this diagnostic supports the overfit-pattern story, not the exact
+launch-copy sentence "0.96 versus 0.008." Use `../PUBLIC_CLAIM_PROOF.md` before quoting exact numbers.
+
 ## Finding that motivates this doc (data, not opinion)
 
 Aggregating all 27 non-dryrun sweep passes (`candidateModel = noderoom/nodeagent-general`):

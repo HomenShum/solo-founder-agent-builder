@@ -37,7 +37,8 @@ process. The agent *runs* verify (drives the UI, captures the proof); it cannot 
 
 This is the opposite of a limit — it is what makes full autonomy safe. You can let the agent run
 unattended **precisely because the referee can't be bribed.** An agent that graded itself would cheat
-(proven: 0.96 hardcoded vs ~0.008 real). So "do everything on the user's behalf" =
+(NodeRoom receipts show selected/family-writer paths around 0.96 and much lower clean/general signals;
+see `docs/PUBLIC_CLAIM_PROOF.md` before quoting exact public numbers). So "do everything on the user's behalf" =
 **all the labor + all the proof, with a verdict the agent cannot fake.** See
 [`honest-lane.md`](honest-lane.md) (derive-don't-accept) and [`trust-root-api.md`](trust-root-api.md).
 
