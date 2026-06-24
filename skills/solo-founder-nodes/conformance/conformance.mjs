@@ -46,8 +46,13 @@ ok("templates substrate present", [
   "control/controlPlane.ts",
   "events/soloEventBus.ts",
   "dashboard/dashboard.ts",
+  "phase/phaseRalph.ts",
   "setup/externalSetupGate.ts",
   "setup/openrouterAgentHosts.ts",
+  "proof/fullProofPack.ts",
+  "freshUser/freshUserEmulation.ts",
+  "threeD/threeDLoop.ts",
+  "trust/trustRoot.ts",
   "research/researchSpine.ts",
   "design/designSkillBridge.ts",
   "design/designQualityGate.ts",
@@ -61,6 +66,8 @@ ok("research-backed implementation directive present", /research-spine/i.test(ma
 ok("design skill portability directive present", /design skills are portable inputs/i.test(master) && /designSkillBridge/i.test(master) && /design flow/i.test(master));
 ok("design quality gate directive present", /design quality gate/i.test(master) && /best\s+UI\/UX/i.test(master) && /browser screenshots/i.test(master));
 ok("gstack operating lanes directive present", /gstack/i.test(master) && /gstackBridge/i.test(master) && /portable operating/i.test(master));
+ok("nested phase RALPH directive present", /Nested phase RALPH/i.test(master) && /phase verify/i.test(master));
+ok("3D/fresh-user/trust proof directives present", /3D founder scenario/i.test(master) && /fresh-user/i.test(master) && /trust verify/i.test(master));
 
 // 5. Portability declared (no single-agent lock-in): the directive names multiple agents / "any coding agent".
 const agents = ["claude code", "codex", "cursor", "windsurf", "trae", "openclaw", "hermes", "opencode", "kilo", "any coding agent"];

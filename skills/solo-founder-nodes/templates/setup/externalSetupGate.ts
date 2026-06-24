@@ -2,9 +2,13 @@ export const defaultDeterministicPrework = [
   "adapter-boundary",
   "ai-chat-component",
   "chat-action-protocol",
+  "provider-selfhosted-matrix",
+  "database-storage-decision",
+  "deployment-target",
   "server-side-secret-boundary",
   "missing-secret-ui",
   "blocked-path-test",
+  "cost-latency-ledger",
   "setup-doc",
   "resume-command",
 ] as const;
@@ -53,9 +57,10 @@ export function makeExternalSetupGateReceipt(input: ExternalSetupGateInput): Ext
     setupUrls: [...new Set(input.setupUrls ?? [])],
     completedPrework: completed,
     missingPrework: missing,
-    humanInstructions: [
+  humanInstructions: [
       `Create or select the ${input.provider} account outside the chat session.`,
       `Add the server-side secret(s): ${requiredSecrets.join(", ") || "<missing env name>"}.`,
+      "Confirm the database, object storage, deployment target, and self-hosted/provider fallback policy.",
       "Do not paste API keys into chat, logs, client-side environment variables, or screenshots.",
       "After the secret is installed, run the resume command(s) and collect provider cost/latency proof.",
     ],

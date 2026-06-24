@@ -18,6 +18,17 @@ import { defaultDeterministicPrework, makeExternalSetupGateReceipt, verifyExtern
 import { makeOpenRouterAgentSetupPack, rankOpenRouterModelsFromCatalog, verifyOpenRouterAgentSetupPack } from "./setup/openrouterAgentHosts";
 import { makeAgentApiContractMarkdown, makeAgentReadyToolContract, verifyAgentReadyToolContract, type AgentReadyToolContract } from "./agentApi/agentReadyApi";
 import { makeLoopRunReceipt, verifyLoopRunReceipt, type LoopRunReceipt } from "./loop/loopRunner";
+import {
+  assertLoopPhase,
+  completePhaseRalphReceipt,
+  makePhaseFailureRouteReceipt,
+  phaseRalphGates,
+  verifyPhaseRalph,
+} from "./phase/phaseRalph";
+import { makeThreeDComparatorRubric, makeThreeDPlan, verifyThreeDPlan } from "./threeD/threeDLoop";
+import { makeFullProofPack, verifyFullProofPack } from "./proof/fullProofPack";
+import { makeFreshUserEmulationPlan, verifyFreshUserEmulationReceipt, type FreshUserEmulationReceipt } from "./freshUser/freshUserEmulation";
+import { makeTrustRootReceipt, verifyTrustRootReceipt } from "./trust/trustRoot";
 import { makeDashboardSnapshot, renderDashboard } from "./dashboard/dashboard";
 import { formatAgentMatrix, makeAgentMatrixRows, makeHookInstallPlan, readSoloEvents, recordSoloEvent } from "./events/soloEventBus";
 import {
@@ -648,6 +659,70 @@ async function main() {
   const noArtifactReopenVerdict = verifyFreshRoomProofReceipt(noArtifactReopenReceipt, { baseDir: proofRoot });
   check("fresh-room receipt rejects missing artifact reopen proof", noArtifactReopenVerdict.ok === false && noArtifactReopenVerdict.errors.some((e) => e.includes("artifactReopened")));
 
+  // ---------------- Full proof pack, fresh-user emulation, trust root, and first-party 3D plan ----------------
+  console.log("\nFullProofPack / FreshUser / TrustRoot / ThreeDPlan:");
+  const threeDPlan = makeThreeDPlan({
+    goal: "build a first-party image/text-to-3D app from a vague screenshot request",
+    generatedAt: "2026-06-24T00:00:00.000Z",
+  });
+  const threeDPlanVerdict = verifyThreeDPlan(threeDPlan);
+  check("3D plan keeps providers as comparator/fallback only", threeDPlanVerdict.ok && threeDPlan.providerPolicy.defaultRole === "comparator_or_fallback_only", threeDPlanVerdict.errors.join("; "));
+  const badThreeDPlan = clone(threeDPlan);
+  badThreeDPlan.firstPartyLanes = badThreeDPlan.firstPartyLanes.filter((lane) => lane.id !== "multiview-reconstruction");
+  const badThreeDPlanVerdict = verifyThreeDPlan(badThreeDPlan);
+  check("3D plan rejects missing first-party reconstruction lane", badThreeDPlanVerdict.ok === false && badThreeDPlanVerdict.errors.some((e) => e.includes("multiview-reconstruction")));
+  const threeDComparator = makeThreeDComparatorRubric();
+  check("3D comparator scores first-party and provider outputs on same rubric", threeDComparator.providers.length >= 4 && threeDComparator.passRule.includes("not the default product architecture"));
+
+  const fullProofPack = makeFullProofPack({
+    goal: "fresh founder 3D proof",
+    runId: "proof_smoke",
+    deployedUrl: "https://example.com/solo-3d-proof",
+    createdAt: "2026-06-24T00:00:00.000Z",
+  });
+  for (const artifact of fullProofPack.artifacts) {
+    const body = artifact.kind.includes("video") || artifact.kind === "playwright-trace"
+      ? "0".repeat(2048)
+      : artifact.kind === "deployed-url"
+        ? "https://example.com/solo-3d-proof\n"
+        : JSON.stringify({ ok: true, artifact: artifact.id, frameInspection: true, video: true }).repeat(3);
+    touch(artifact.path, body);
+  }
+  const fullProofVerdict = verifyFullProofPack(fullProofPack, { baseDir: proofRoot });
+  check("full proof pack requires video/trace/deploy/assets/reopen/scorecard/trust evidence", fullProofVerdict.ok, fullProofVerdict.errors.join("; "));
+  const noVideoProof = clone(fullProofPack);
+  noVideoProof.artifacts = noVideoProof.artifacts.filter((artifact) => artifact.kind !== "fullscreen-video");
+  const noVideoProofVerdict = verifyFullProofPack(noVideoProof, { baseDir: proofRoot });
+  check("full proof pack rejects missing full-screen video", noVideoProofVerdict.ok === false && noVideoProofVerdict.errors.some((e) => e.includes("fullscreen-video")));
+
+  const freshUserPlan = makeFreshUserEmulationPlan({
+    caseId: "fresh-3d-001",
+    userPrompt: "I want an AI app that can create 3D models from pictures for games and construction parts.",
+    githubUrl: "https://github.com/example/fresh-founder-app",
+  });
+  const freshEvidence: Record<string, string> = {};
+  for (const choice of freshUserPlan.requiredSetupChoices) freshEvidence[`choice:${choice}`] = touch(`fresh-user/choice-${choice}.json`, "{\"ok\":true}");
+  for (const evidence of freshUserPlan.requiredEvidence) freshEvidence[evidence] = touch(`fresh-user/${evidence}.json`, "{\"ok\":true}");
+  const freshUserReceipt: FreshUserEmulationReceipt = { ...freshUserPlan, actualEvidence: freshEvidence, completed: true };
+  const freshUserVerdict = verifyFreshUserEmulationReceipt(freshUserReceipt, { baseDir: proofRoot });
+  check("fresh-user emulation requires setup choices and proof evidence", freshUserVerdict.ok, freshUserVerdict.errors.join("; "));
+  const missingFreshChoice = clone(freshUserReceipt);
+  delete missingFreshChoice.actualEvidence["choice:database"];
+  const missingFreshChoiceVerdict = verifyFreshUserEmulationReceipt(missingFreshChoice, { baseDir: proofRoot });
+  check("fresh-user emulation rejects missing DB/provider choice evidence", missingFreshChoiceVerdict.ok === false && missingFreshChoiceVerdict.errors.some((e) => e.includes("database")));
+
+  const trustRoot = makeTrustRootReceipt({
+    runId: "proof_smoke",
+    verifierCommand: "ci verify-proof proof_smoke",
+    signedArtifacts: ["proof-verdict.json", "heldout-manifest.sig"],
+    createdAt: "2026-06-24T00:00:00.000Z",
+  });
+  const trustRootVerdict = verifyTrustRootReceipt(trustRoot);
+  check("trust root keeps held-out salt and verdict outside agent process", trustRootVerdict.ok, trustRootVerdict.errors.join("; "));
+  const badTrustRoot = { ...trustRoot, agentCanWriteVerdict: true };
+  const badTrustRootVerdict = verifyTrustRootReceipt(badTrustRoot);
+  check("trust root rejects agent-writable verdicts", badTrustRootVerdict.ok === false && badTrustRootVerdict.errors.some((e) => e.includes("final verdict")));
+
   // ---------------- Build-to-delete: rework ledger ----------------
   console.log("\nReworkLedger (build-to-delete learning preservation):");
   const reworkLedger: ReworkLedger = makeReworkLedger({
@@ -718,6 +793,7 @@ async function main() {
   loopReceipt.phases.find((phase) => phase.phase === "verify")!.artifacts = {
     "proof-verdict": makeLoopFile("proof-verdict.json", "{\"ok\":true}"),
     "fresh-room-receipt": makeLoopFile("fresh-room-latest.json"),
+    "design-quality": makeLoopFile("verify-design-quality.json"),
   };
   const loopVerdict = verifyLoopRunReceipt(loopReceipt, { baseDir: proofRoot });
   check("loop runner passes only when every phase receipt exists", loopVerdict.ok, loopVerdict.errors.join("; "));
@@ -729,6 +805,26 @@ async function main() {
   writeFileSync(join(proofRoot, badProofVerdictLoop.phases.find((phase) => phase.phase === "verify")!.artifacts["proof-verdict"]!), "{\"ok\":false}", "utf8");
   const badProofVerdict = verifyLoopRunReceipt(badProofVerdictLoop, { baseDir: proofRoot });
   check("loop runner refuses done without passing proof-verdict.json", badProofVerdict.ok === false && badProofVerdict.errors.some((e) => e.includes("proof-verdict")));
+
+  // ---------------- Nested phase RALPH: every major phase has its own gates ----------------
+  console.log("\nPhaseRalph (nested R/A/L/P/H per loop phase):");
+  const phaseRoot = mkdtempSync(join(tmpdir(), `solo-phase-ralph-${process.pid}-`));
+  const missingVerifyGate = verifyPhaseRalph(phaseRoot, assertLoopPhase("verify"), "P");
+  check("nested phase RALPH rejects missing verify proof receipts", missingVerifyGate.ok === false && missingVerifyGate.missing.some((item) => item.includes("proof-verdict")));
+  for (const gate of phaseRalphGates.verify) {
+    for (const receipt of gate.requiredReceipts) {
+      completePhaseRalphReceipt(phaseRoot, { phase: "verify", stage: gate.stage, receiptId: receipt });
+    }
+  }
+  const completeVerifyGate = verifyPhaseRalph(phaseRoot, "verify");
+  check("nested phase RALPH accepts complete verify receipts", completeVerifyGate.ok, completeVerifyGate.errors.join("; "));
+  const routeReceipt = makePhaseFailureRouteReceipt({
+    toPhase: "build",
+    reason: "verified UI proof showed the chat action protocol cannot express viewer edits",
+    evidenceRefs: ["proof-verdict.json", "playwright-trace.zip"],
+    createdAt: "2026-06-24T00:00:00.000Z",
+  });
+  check("phase route sends verified failures back to earlier phase", routeReceipt.fromPhase === "verify" && routeReceipt.toPhase === "build" && routeReceipt.evidenceRefs.length === 2);
 
   // ---------------- RALPH Loop Ledger: resumable milestone state ----------------
   console.log("\nRalphLoopLedger (.solo loop-state + events + receipt gates):");
@@ -802,6 +898,7 @@ async function main() {
 
   const codexHookPlan = makeHookInstallPlan("codex", "2026-06-24T00:00:00.000Z");
   check("hook plan writes shared recorder and Codex hook files", codexHookPlan.files.some((file) => file.path === ".solo/bin/record-event") && codexHookPlan.files.some((file) => file.path === ".codex/config.toml"));
+  check("hook plan writes concrete lifecycle hook scripts", [".codex/hooks/solo-pre-tool.js", ".codex/hooks/solo-post-tool.js", ".codex/hooks/solo-stop.js"].every((path) => codexHookPlan.files.some((file) => file.path === path && file.executable === true)));
   check("hook plan carries no-self-report warning", codexHookPlan.warnings.some((warning) => warning.includes("Generic/no-hooks agents")));
 
   const dashboard = renderDashboard(ralphRoot, { eventLimit: 8 });

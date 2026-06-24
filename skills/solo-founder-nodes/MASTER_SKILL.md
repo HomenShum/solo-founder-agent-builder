@@ -126,6 +126,11 @@ required receipts; the verify/proof milestone cannot complete without a passing 
 Doctrine: [`references/ralph-loop-ledger.md`](references/ralph-loop-ledger.md); copyable
 implementation: [`templates/loop/`](templates/loop/).
 
+**Nested phase RALPH:** the macro RALPH ledger is not enough. Each major phase also has its own
+`R/A/L/P/H` gates via `npm run sfn -- phase verify --phase <discover|benchmark|setup|build|adapter|verify|iterate>`.
+`verify` must emit the failure route, and `iterate` must consume that verified evidence to route back
+to the earliest broken phase. Do not patch from vibes; no Phase 6 proof means no Phase 7 fix.
+
 ## Research spine (required for research-backed implementation)
 
 The agent must not turn a founder's domain prompt into unsupported architecture or product claims. At
@@ -137,6 +142,20 @@ onward, fail closed if a major capability/result claim lacks proof artifacts. Un
 must be labeled `unsupported_assumption` or `rejected`, never sold as shipped capability. Doctrine:
 [`references/research-spine.md`](references/research-spine.md); copyable implementation:
 [`templates/research/`](templates/research/).
+
+**3D founder scenario:** for picture/text/video-to-3D requests, default to a first-party plan:
+capture/coverage -> multi-view reconstruction or local/open image/text-to-asset -> depth fallback ->
+assetize/export -> Three.js/WebGL viewer action protocol. Meshy/Tripo/Rodin/Luma are comparator or
+fallback lanes, not the product architecture unless the founder explicitly chooses provider-first.
+Use `npm run sfn -- 3d plan ...` and `npm run sfn -- 3d verify ...`.
+
+**Fresh-user and proof gates:** screenshot-only founder requests must be proven through a fresh
+nontechnical emulation receipt (`npm run sfn -- fresh-user ...`) and a full proof pack
+(`npm run sfn -- proof full-verify ...`). A plain recording is not enough: require full-screen video,
+separate recording audit, terminal transcript, Playwright trace/video, deployed URL, generated assets,
+export/reopen proof, scorecard, cost/latency, and a trust-root verdict. Use
+`npm run sfn -- trust verify ...` to prove held-out salt, scorer, and final verdict stay outside the
+agent process.
 
 ## Agent-ready API gate (hard for tools)
 

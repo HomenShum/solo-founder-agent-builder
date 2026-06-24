@@ -39,6 +39,8 @@ npm run sfn -- loop resume --loop-id <id> --project .
 npm run sfn -- loop start --from A --project .
 npm run sfn -- loop pause --message "waiting on provider key" --project .
 npm run sfn -- loop verify --milestone P --project .
+npm run sfn -- phase verify --phase verify --stage P --project .
+npm run sfn -- phase route --to build --reason "verified UI proof failed at action protocol" --project .
 ```
 
 Start-anywhere rule:
@@ -58,6 +60,11 @@ Command-center rule:
 - `loop doctor` checks local layout health without requiring the founder to inspect `.solo` manually.
 - `dashboard` is the visual operating surface: loop state, proof verdict, receipt counts, events,
   agent host policy, and artifacts in one terminal view.
+- `phase verify` enforces nested RALPH inside every major phase, so `discover`, `benchmark`, `setup`,
+  `build`, `adapter`, `verify`, and `iterate` each require their own reality, acceptance, live,
+  proof, and hardening receipts.
+- `phase route` writes a verified failure route from Phase 6 back to the earliest broken phase. Phase
+  7 iteration must consume this receipt before making a fix.
 
 Operating rule:
 

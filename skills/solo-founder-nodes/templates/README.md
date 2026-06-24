@@ -31,13 +31,19 @@ npm run sfn -- loop doctor --project <path>
 npm run sfn -- loop resume --loop-id <id> --project <path>
 npm run sfn -- loop start --from <R|A|L|P|H> --project <path>
 npm run sfn -- loop verify --milestone <R|A|L|P|H> --project <path>
+npm run sfn -- phase verify --phase verify --stage P --project <path>
+npm run sfn -- phase route --to build --reason "live proof failed at chat action protocol" --project <path>
 npm run sfn -- agent matrix                 # host adapters, hook files, proof mode, self-report policy
 npm run sfn -- agent install-hooks --target codex --project . --dry-run
 npm run sfn -- noderoom run-fresh-room --case FR-010 --base-url <url> --headed --record-video --trace on --focus-mode on --model-mode top_paid --budget benchmark_completion
 npm run sfn -- run --project <path> --goal <g> --out loop-run.json
 npm run sfn -- run verify --receipt loop-run.json
+npm run sfn -- proof full-verify --receipt full-proof-pack.json
 npm run sfn -- agent-api verify --contract agent-api-contract.json
 npm run sfn -- fresh-room verify --receipt docs/eval/fresh-room/<case-id>/latest.json
+npm run sfn -- fresh-user init --case fresh-3d-001 --prompt "I want a 3D model app from pictures"
+npm run sfn -- trust verify --receipt trust-root-receipt.json
+npm run sfn -- 3d plan --goal "first-party picture/text to 3D app"
 npm run sfn -- memory add --project . --project-id <id> --summary <s>
 npm run sfn -- rework list --project .
 npm run sfn -- rework verify --ledger rework-ledger.json
@@ -74,10 +80,19 @@ npm run sfn -- ledger verify <runId>        # re-verify a run's hash-chain (tamp
 - **`loop/` - RALPH Loop Ledger + Loop Runner**: `.solo/loop-state.json`, `events.jsonl`, milestone
   receipt directories, start-anywhere gates, and executable phase receipts for discover -> benchmark ->
   setup -> build -> adapter -> verify -> iterate, with proof-verdict enforcement before rework.
+- **`phase/` - nested phase RALPH**: each major phase has its own R/A/L/P/H receipt gates, and
+  verified failures route back to the earliest broken phase instead of patching blindly.
 - **`agentApi/` - Agent-ready API gate**: semantic tool contracts, provider-schema parity, and
   structured failure/recovery checks.
-- **`proof/` - Fresh-room proof receipts**: live browser proof receipts with trace/video/screenshots,
-  official scorer results, exported/reopened artifacts, costs, latency, and token usage.
+- **`proof/` - Fresh-room and full proof receipts**: live browser proof receipts with trace/video/screenshots,
+  official scorer results, exported/reopened artifacts, costs, latency, token usage, full-screen
+  video, recording audit, deployed URL, generated assets, scorecard, and trust-root verdict.
+- **`freshUser/` - Fresh nontechnical founder emulation**: required setup choices and proof evidence
+  for a GitHub-URL-plus-vague-prompt session.
+- **`threeD/` - First-party 3D app lane**: capture/reconstruction/3DGS/local generation/depth
+  fallback/export/viewer-action plan with providers as comparator/fallback only.
+- **`trust/` - Trust-root receipt**: held-out salt, scorer, and final verdict boundaries that stay
+  outside the agent process.
 - **`rework/` - Build-to-delete ledger**: records replaced/deleted approaches, failure receipts,
   surviving proof, and lessons.
 - **`design/`**: the design-bridge templates (brief / component contract / visual-regression checklist).

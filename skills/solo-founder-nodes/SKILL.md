@@ -62,6 +62,10 @@ agent telemetry into `.solo/events.jsonl` with `SoloEvent`, inspect adapters wit
 completion. Spec: [`references/cli-command-center.md`](references/cli-command-center.md); templates in
 [`templates/events/`](templates/events/) and [`templates/dashboard/`](templates/dashboard/).
 
+**Nested phase RALPH:** every phase has its own `R/A/L/P/H` gates, not just the macro loop. Use
+`npm run sfn -- phase verify --phase <phase>` and route verified failures with
+`npm run sfn -- phase route --to <phase> --reason <why>`. No Phase 6 proof means no Phase 7 fix.
+
 **Research spine:** at `discover`, create or refresh `research-spine.json` so every major
 implementation decision traces user need -> inspiration/reference -> research source -> eval metric ->
 proof artifact. From `build` onward, block uncited decisions; from `verify` onward, block supported
@@ -75,6 +79,11 @@ test, setup docs, cost/latency ledger shape, and exact resume commands. Use
 [`templates/setup/externalSetupGate.ts`](templates/setup/externalSetupGate.ts) or
 `npm run sfn -- setup gate ...`; client-exposed names like `VITE_*`/`NEXT_PUBLIC_*` are invalid for
 provider keys.
+
+**3D/fresh-user proof:** for screenshot-only picture/text/video-to-3D requests, use
+`npm run sfn -- 3d plan ...` with first-party lanes and providers as comparators/fallbacks. Prove the
+claim with `fresh-user`, `proof full-verify`, and `trust verify` receipts before saying a nontechnical
+founder or judge can use it end to end.
 
 **Design skills:** design guidance is not Claude Code locked. Use
 [`templates/design/designSkillBridge.ts`](templates/design/designSkillBridge.ts) or

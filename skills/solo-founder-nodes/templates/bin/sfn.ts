@@ -70,6 +70,18 @@ import {
 } from "../setup/openrouterAgentHosts";
 import { makeLoopRunReceipt, verifyLoopRunReceipt, type LoopRunReceipt } from "../loop/loopRunner";
 import {
+  assertLoopPhase,
+  assertPhaseRalphStage,
+  completePhaseRalphReceipt,
+  makePhaseFailureRouteReceipt,
+  phaseRalphGates,
+  verifyPhaseRalph,
+} from "../phase/phaseRalph";
+import { makeThreeDComparatorRubric, makeThreeDPlan, verifyThreeDPlan, type ThreeDPlan } from "../threeD/threeDLoop";
+import { makeFullProofPack, verifyFullProofPack, type FullProofPack } from "../proof/fullProofPack";
+import { makeFreshUserEmulationPlan, verifyFreshUserEmulationReceipt, type FreshUserEmulationReceipt } from "../freshUser/freshUserEmulation";
+import { makeTrustRootReceipt, verifyTrustRootReceipt, type TrustRootReceipt } from "../trust/trustRoot";
+import {
   completeRalphMilestone,
   createRalphLedger,
   doctorRalphLoop,
@@ -276,6 +288,9 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   loop doctor [--project <path>]
   loop verify --milestone <R|A|L|P|H> [--project <path>]
   loop complete --milestone <R|A|L|P|H> --receipt <path>... [--project <path>]
+  phase status|verify --phase <p> [--stage <R|A|L|P|H>] [--project <path>]
+  phase complete --phase <p> --stage <R|A|L|P|H> --receipt <id>... [--project <path>]
+  phase route --to <phase> --reason <text> [--evidence <path>] [--project <path>]
   agent list|matrix
   agent install-hooks --target <host|all> [--project <path>] [--dry-run]
   agent run --host <host> --goal <g> [--project <path>] [--command <cmd>] [--execute]
@@ -307,8 +322,17 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   proof collect --run <dir> --artifact <id> --path <path> [--sha256 <hash>]
   proof verify --run <dir>
   proof verdict --run <dir>
+  proof full-init --goal <g> --deployed-url <url> [--out <file>]
+  proof full-verify --receipt <file> [--base <dir>]
   proof publish --run <dir> [--out <file>]
   compare top3d [--out <file>]  print/write the 3D provider comparison rubric
+  3d init|plan --goal <g> [--out <file>]
+  3d verify --file <file>
+  3d compare [--out <file>]
+  fresh-user init --case <id> --prompt <p> [--github <url>] [--out <file>]
+  fresh-user verify --receipt <file> [--base <dir>]
+  trust init --run <id> --verifier <cmd> [--signed <path>] [--out <file>]
+  trust verify --receipt <file>
   agents openrouter-plan [--out <dir>] [--host-root <path>] [--audit <file>]
   agents openrouter-audit [--catalog <file>] [--out <file>] [--max <n>]
   design registry [--out <file>]
@@ -530,6 +554,56 @@ async function main() {
         process.exit(0);
       }
       console.error("loop: init | status | resume | pause | events | doctor | start --from <R|A|L|P|H> | verify --milestone <R|A|L|P|H> | complete --milestone <R|A|L|P|H> --receipt <path>...");
+      process.exit(2);
+    }
+    case "phase": {
+      const sub = rest[0];
+      const projectPath = resolve(flag(rest, "--project", ".")!);
+      if (sub === "status" || sub === "verify") {
+        const phase = assertLoopPhase(flag(rest, "--phase") ?? "");
+        const stage = flag(rest, "--stage") ? assertPhaseRalphStage(flag(rest, "--stage")!) : undefined;
+        const verdict = verifyPhaseRalph(projectPath, phase, stage);
+        console.log(JSON.stringify({ projectPath, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      if (sub === "complete") {
+        const phase = assertLoopPhase(flag(rest, "--phase") ?? "");
+        const stage = assertPhaseRalphStage(flag(rest, "--stage") ?? "");
+        const receipts = flags(rest, "--receipt");
+        if (receipts.length === 0) {
+          console.error("phase complete --phase <p> --stage <R|A|L|P|H> --receipt <id>... [--project <path>]");
+          process.exit(2);
+        }
+        const written = receipts.map((receiptId) => completePhaseRalphReceipt(projectPath, { phase, stage, receiptId }));
+        console.log(JSON.stringify({ projectPath, phase, stage, written }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "route") {
+        const toPhase = assertLoopPhase(flag(rest, "--to") ?? "");
+        if (toPhase === "iterate") {
+          console.error("phase route --to cannot target iterate; route to the earlier broken phase or verify");
+          process.exit(2);
+        }
+        const reason = flag(rest, "--reason");
+        if (!reason) {
+          console.error("phase route --to <phase> --reason <text> [--evidence <path>] [--project <path>]");
+          process.exit(2);
+        }
+        const receipt = makePhaseFailureRouteReceipt({ toPhase, reason, evidenceRefs: flags(rest, "--evidence") });
+        const out = completePhaseRalphReceipt(projectPath, {
+          phase: "verify",
+          stage: "H",
+          receiptId: "failure-route",
+          payload: { route: receipt },
+        });
+        console.log(JSON.stringify({ projectPath, receiptPath: out.path, receipt }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "gates") {
+        console.log(JSON.stringify(phaseRalphGates, jbig, 2));
+        process.exit(0);
+      }
+      console.error("phase: status|verify --phase <p> [--stage <R|A|L|P|H>] | complete --phase <p> --stage <R|A|L|P|H> --receipt <id>... | route --to <phase> --reason <text> | gates");
       process.exit(2);
     }
     case "run": {
@@ -1029,6 +1103,31 @@ async function main() {
         console.log(JSON.stringify({ run: absRun, verdict }, jbig, 2));
         process.exit(verdict.ok ? 0 : 1);
       }
+      if (sub === "full-init") {
+        const goal = flag(rest, "--goal");
+        const deployedUrl = flag(rest, "--deployed-url");
+        if (!goal || !deployedUrl) {
+          console.error("proof full-init --goal <g> --deployed-url <url> [--out <file>]");
+          process.exit(2);
+        }
+        const pack = makeFullProofPack({ goal, deployedUrl });
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), pack);
+        console.log(JSON.stringify(out ? { out: resolve(out), pack } : pack, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "full-verify") {
+        const receiptPath = flag(rest, "--receipt");
+        if (!receiptPath) {
+          console.error("proof full-verify --receipt <file> [--base <dir>]");
+          process.exit(2);
+        }
+        const abs = resolve(receiptPath);
+        const pack = readJson<FullProofPack>(abs);
+        const verdict = verifyFullProofPack(pack, { baseDir: flag(rest, "--base") ? resolve(flag(rest, "--base")!) : dirname(abs) });
+        console.log(JSON.stringify({ receipt: abs, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
       if (sub === "publish") {
         const runDir = flag(rest, "--run");
         if (!runDir) {
@@ -1052,7 +1151,7 @@ async function main() {
         console.log(JSON.stringify(out ? { out: resolve(out), summary } : summary, jbig, 2));
         process.exit(verdict.ok === true ? 0 : 1);
       }
-      console.error("proof: init | start | receipt | collect | verify | verdict | publish");
+      console.error("proof: init | start | receipt | collect | verify | verdict | full-init | full-verify | publish");
       process.exit(2);
     }
     case "compare": {
@@ -1070,6 +1169,102 @@ async function main() {
         console.log(JSON.stringify(rubric, jbig, 2));
       }
       process.exit(0);
+    }
+    case "3d": {
+      const sub = rest[0];
+      if (sub === "init" || sub === "plan") {
+        const goal = flag(rest, "--goal");
+        if (!goal) {
+          console.error("3d init|plan --goal <g> [--out <file>]");
+          process.exit(2);
+        }
+        const plan = makeThreeDPlan({ goal });
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), plan);
+        console.log(JSON.stringify(out ? { out: resolve(out), plan } : plan, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "verify") {
+        const file = flag(rest, "--file");
+        if (!file) {
+          console.error("3d verify --file <file>");
+          process.exit(2);
+        }
+        const abs = resolve(file);
+        const plan = readJson<ThreeDPlan>(abs);
+        const verdict = verifyThreeDPlan(plan);
+        console.log(JSON.stringify({ file: abs, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      if (sub === "compare") {
+        const rubric = makeThreeDComparatorRubric();
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), rubric);
+        console.log(JSON.stringify(out ? { out: resolve(out), rubric } : rubric, jbig, 2));
+        process.exit(0);
+      }
+      console.error("3d: init|plan --goal <g> [--out <file>] | verify --file <file> | compare [--out <file>]");
+      process.exit(2);
+    }
+    case "fresh-user": {
+      const sub = rest[0];
+      if (sub === "init") {
+        const caseId = flag(rest, "--case");
+        const userPrompt = flag(rest, "--prompt");
+        if (!caseId || !userPrompt) {
+          console.error("fresh-user init --case <id> --prompt <p> [--github <url>] [--out <file>]");
+          process.exit(2);
+        }
+        const plan = makeFreshUserEmulationPlan({ caseId, userPrompt, githubUrl: flag(rest, "--github") });
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), plan);
+        console.log(JSON.stringify(out ? { out: resolve(out), plan } : plan, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "verify") {
+        const receiptPath = flag(rest, "--receipt");
+        if (!receiptPath) {
+          console.error("fresh-user verify --receipt <file> [--base <dir>]");
+          process.exit(2);
+        }
+        const abs = resolve(receiptPath);
+        const receipt = readJson<FreshUserEmulationReceipt>(abs);
+        const verdict = verifyFreshUserEmulationReceipt(receipt, { baseDir: flag(rest, "--base") ? resolve(flag(rest, "--base")!) : dirname(abs) });
+        console.log(JSON.stringify({ receipt: abs, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      console.error("fresh-user: init --case <id> --prompt <p> [--github <url>] [--out <file>] | verify --receipt <file> [--base <dir>]");
+      process.exit(2);
+    }
+    case "trust": {
+      const sub = rest[0];
+      if (sub === "init") {
+        const runId = flag(rest, "--run");
+        const verifierCommand = flag(rest, "--verifier");
+        if (!runId || !verifierCommand) {
+          console.error("trust init --run <id> --verifier <cmd> [--signed <path>] [--out <file>]");
+          process.exit(2);
+        }
+        const receipt = makeTrustRootReceipt({ runId, verifierCommand, signedArtifacts: flags(rest, "--signed") });
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), receipt);
+        console.log(JSON.stringify(out ? { out: resolve(out), receipt } : receipt, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "verify") {
+        const receiptPath = flag(rest, "--receipt");
+        if (!receiptPath) {
+          console.error("trust verify --receipt <file>");
+          process.exit(2);
+        }
+        const abs = resolve(receiptPath);
+        const receipt = readJson<TrustRootReceipt>(abs);
+        const verdict = verifyTrustRootReceipt(receipt);
+        console.log(JSON.stringify({ receipt: abs, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      console.error("trust: init --run <id> --verifier <cmd> [--signed <path>] [--out <file>] | verify --receipt <file>");
+      process.exit(2);
     }
     case "agent": {
       const sub = rest[0];
