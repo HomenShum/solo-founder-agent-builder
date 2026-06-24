@@ -92,6 +92,15 @@ import {
 } from "../phase/phaseRalph";
 import { makeThreeDComparatorRubric, makeThreeDPlan, verifyThreeDPlan, type ThreeDPlan } from "../threeD/threeDLoop";
 import {
+  makeThreeDAssetQualityPlan,
+  threeDAssetClaimLevels,
+  threeDAssetTargets,
+  verifyThreeDAssetQualityReceipt,
+  type ThreeDAssetClaimLevel,
+  type ThreeDAssetQualityReceipt,
+  type ThreeDAssetTarget,
+} from "../threeD/assetQualityGate";
+import {
   makeResearchOnlyAsset,
   verifyResearchAssetManifest,
   type ResearchAssetManifest,
@@ -293,6 +302,18 @@ function parseSoloPhase(value?: string): SoloLoopPhase {
   throw new Error(`unsupported phase '${value ?? ""}' (expected one of: ${soloLoopPhases.join(", ")})`);
 }
 
+function parseThreeDAssetTarget(value?: string): ThreeDAssetTarget {
+  const normalized = value ?? "viewer";
+  if (threeDAssetTargets.includes(normalized as ThreeDAssetTarget)) return normalized as ThreeDAssetTarget;
+  throw new Error(`unsupported 3D asset target '${normalized}' (expected one of: ${threeDAssetTargets.join(", ")})`);
+}
+
+function parseThreeDAssetClaimLevel(args: string[]): ThreeDAssetClaimLevel {
+  const raw = flag(args, "--claim", args.includes("--industry-grade") ? "industry-grade" : "prototype");
+  if (raw && threeDAssetClaimLevels.includes(raw as ThreeDAssetClaimLevel)) return raw as ThreeDAssetClaimLevel;
+  throw new Error(`unsupported 3D asset claim level '${raw ?? ""}' (expected one of: ${threeDAssetClaimLevels.join(", ")})`);
+}
+
 function parseGstackRisk(value?: string): GstackRiskLevel {
   if (value && gstackRiskLevels.includes(value as GstackRiskLevel)) return value as GstackRiskLevel;
   throw new Error(`unsupported gstack risk '${value ?? ""}' (expected one of: ${gstackRiskLevels.join(", ")})`);
@@ -381,6 +402,8 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   3d init|plan --goal <g> [--out <file>]
   3d verify --file <file>
   3d compare [--out <file>]
+  3d quality-plan --goal <g> [--target viewer|game|cad|character|scene|marketplace] [--claim personal-research-scaffold|prototype|industry-grade] [--industry-grade] [--out <file>]
+  3d quality-verify --receipt <file> [--base <dir>]
   3d make-asset --goal <g> --project-id <id> --out-dir <dir> [--functional-spec <file>] [--deconstruction-receipt <file>]
   3d verify-asset --manifest <file> [--base <dir>]
   engineering plan --goal <g> [--risk low|material_damage|safety_critical|medical_or_life_support] [--urgency routine|urgent|emergency] [--out <file>]
@@ -1267,6 +1290,34 @@ async function main() {
         console.log(JSON.stringify(out ? { out: resolve(out), rubric } : rubric, jbig, 2));
         process.exit(0);
       }
+      if (sub === "quality-plan" || sub === "asset-quality-plan") {
+        const goal = flag(rest, "--goal");
+        if (!goal) {
+          console.error("3d quality-plan --goal <g> [--target viewer|game|cad|character|scene|marketplace] [--claim personal-research-scaffold|prototype|industry-grade] [--industry-grade] [--out <file>]");
+          process.exit(2);
+        }
+        const plan = makeThreeDAssetQualityPlan({
+          goal,
+          target: parseThreeDAssetTarget(flag(rest, "--target", "viewer")),
+          claimLevel: parseThreeDAssetClaimLevel(rest),
+        });
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), plan);
+        console.log(JSON.stringify(out ? { out: resolve(out), plan } : plan, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "quality-verify" || sub === "asset-quality-verify") {
+        const receiptPath = flag(rest, "--receipt");
+        if (!receiptPath) {
+          console.error("3d quality-verify --receipt <file> [--base <dir>]");
+          process.exit(2);
+        }
+        const abs = resolve(receiptPath);
+        const receipt = readJson<ThreeDAssetQualityReceipt>(abs);
+        const verdict = verifyThreeDAssetQualityReceipt(receipt, { baseDir: flag(rest, "--base") ? resolve(flag(rest, "--base")!) : dirname(abs) });
+        console.log(JSON.stringify({ receipt: abs, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
       if (sub === "make-asset" || sub === "asset-make") {
         const goal = flag(rest, "--goal");
         const projectId = flag(rest, "--project-id");
@@ -1310,7 +1361,7 @@ async function main() {
         console.log(JSON.stringify({ manifest: abs, verdict }, jbig, 2));
         process.exit(verdict.ok ? 0 : 1);
       }
-      console.error("3d: init|plan --goal <g> [--out <file>] | verify --file <file> | compare [--out <file>] | make-asset --goal <g> --project-id <id> --out-dir <dir> [--functional-spec <file>] [--deconstruction-receipt <file>] | verify-asset --manifest <file> [--base <dir>]");
+      console.error("3d: init|plan --goal <g> [--out <file>] | verify --file <file> | compare [--out <file>] | quality-plan --goal <g> [--target <target>] [--claim <level>] [--out <file>] | quality-verify --receipt <file> [--base <dir>] | make-asset --goal <g> --project-id <id> --out-dir <dir> [--functional-spec <file>] [--deconstruction-receipt <file>] | verify-asset --manifest <file> [--base <dir>]");
       process.exit(2);
     }
     case "engineering": {

@@ -164,6 +164,17 @@ personal-research-only, not production-ready, not human-use approved, and not an
 Commercial/deployment use is a user-owned external decision after their due diligence; the agent must
 not claim to approve it.
 
+**3D asset quality gate:** coherent/prototype/industry-grade asset claims require more than a visible
+OBJ. Before building, run `npm run sfn -- 3d quality-plan --goal "<goal>" --target
+<viewer|game|cad|character|scene|marketplace> --industry-grade` when the target claim is industry
+grade. During verify, run `npm run sfn -- 3d quality-verify --receipt <asset-quality-receipt.json>`.
+The receipt must prove semantic part graph, mesh validity, topology/retopo, UV unwrap, PBR material
+maps, GLB/glTF export, DCC/viewer reopen, wireframe/UV screenshots, benchmark scorecard, and
+LOD/collision/pivot where runtime use demands it. OBJ-only, random primitive, no-UV, no-PBR,
+no-topology, or no-reopen evidence blocks prototype/customer/industry claims. Doctrine:
+[`references/industry-3d-assets.md`](references/industry-3d-assets.md); copyable implementation:
+[`templates/threeD/assetQualityGate.ts`](templates/threeD/assetQualityGate.ts).
+
 **Engineering invention harness:** for engineer/inventor requests that mention urgent, safety-critical,
 life-support, medical, field-repair, or "life and death" stakes, use `npm run sfn -- engineering plan
 ...` before build work. The harness may allow an exact previous model only inside a sealed,

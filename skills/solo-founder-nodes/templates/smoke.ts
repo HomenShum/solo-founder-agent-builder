@@ -36,6 +36,7 @@ import {
   verifyPhaseRalph,
 } from "./phase/phaseRalph";
 import { makeThreeDComparatorRubric, makeThreeDPlan, verifyThreeDPlan } from "./threeD/threeDLoop";
+import { makeThreeDAssetQualityPlan, verifyThreeDAssetQualityReceipt, type ThreeDAssetQualityReceipt } from "./threeD/assetQualityGate";
 import { makeResearchOnlyAsset, verifyResearchAssetManifest } from "./threeD/researchAssetMaker";
 import { makeEngineeringInventionHarness, verifyEngineeringInventionHarness } from "./engineering/engineeringInventionHarness";
 import { makeFirstPrinciplesDeconstructionReceipt, verifyFirstPrinciplesDeconstructionReceipt } from "./engineering/firstPrinciplesDeconstructionReceipt";
@@ -765,6 +766,73 @@ async function main() {
   check("3D comparator scores first-party and provider outputs on same rubric", threeDComparator.providers.length >= 4 && threeDComparator.passRule.includes("not the default product architecture"));
   check("3D comparator stays a 100-point rubric", threeDComparator.metrics.reduce((sum, metric) => sum + metric.points, 0) === 100);
 
+  console.log("\nThreeDAssetQualityGate (industry-grade asset bar):");
+  const assetQualityPlan = makeThreeDAssetQualityPlan({
+    goal: "Produce a coherent game-ready 3D asset from screenshot inspiration.",
+    target: "game",
+    claimLevel: "industry-grade",
+    generatedAt: "2026-06-24T00:00:00.000Z",
+  });
+  check(
+    "3D asset quality plan requires topology/UV/PBR/export/reopen/scorecard",
+    ["topology-retopo", "uv-unwrap", "pbr-materials", "portable-engine-export", "dcc-reopen-proof", "benchmark-scorecard"].every((id) =>
+      assetQualityPlan.criteria.some((criterion) => criterion.id === id),
+    ) && assetQualityPlan.failClosedRules.some((rule) => rule.includes("OBJ-only")),
+  );
+  const completeAssetQualityReceipt: ThreeDAssetQualityReceipt = {
+    schemaVersion: 1,
+    goal: assetQualityPlan.goal,
+    target: "game",
+    claimLevel: "industry-grade",
+    generatedAt: "2026-06-24T00:00:00.000Z",
+    researchSourceIds: assetQualityPlan.sources.map((source) => source.id),
+    criteria: assetQualityPlan.criteria.map((criterion) => criterion.id),
+    evidence: {
+      semanticPartGraphPath: touch("asset-quality/semantic-part-graph.json", "{\"parts\":[\"frame\",\"lens\",\"hinge\"]}"),
+      meshStats: { vertices: 1824, faces: 3612, objectCount: 8, degenerateFaces: 0, normalsPresent: true, unitScale: "meters" },
+      topologyReportPath: touch("asset-quality/topology-report.md", "manifold-ish retopo report"),
+      uvReportPath: touch("asset-quality/uv-report.md", "uv atlas non-overlap report"),
+      pbrMaterialMapPaths: {
+        baseColor: touch("asset-quality/baseColor.png"),
+        normal: touch("asset-quality/normal.png"),
+        roughness: touch("asset-quality/roughness.png"),
+        metallic: touch("asset-quality/metallic.png"),
+      },
+      exports: {
+        glb: touch("asset-quality/generated.glb", "glb-bytes"),
+        obj: touch("asset-quality/generated.obj", "obj-bytes"),
+      },
+      reopenProofPaths: [touch("asset-quality/reopen-proof.json", "{\"ok\":true}")],
+      viewerScreenshotPaths: [touch("asset-quality/viewer.png", "png")],
+      wireframeScreenshotPaths: [touch("asset-quality/wireframe.png", "png")],
+      uvScreenshotPaths: [touch("asset-quality/uv-layout.png", "png")],
+      lodCollisionPivotReceiptPath: touch("asset-quality/lod-collision-pivot.json", "{\"ok\":true}"),
+      benchmarkScorecardPath: touch("asset-quality/scorecard.json", "{\"p3d\":true}"),
+      rightsProvenanceReceiptPath: touch("asset-quality/rights-provenance.json", "{\"exactReplicaExport\":false}"),
+    },
+    restrictions: { exactReplicaExport: false },
+  };
+  const assetQualityVerdict = verifyThreeDAssetQualityReceipt(completeAssetQualityReceipt, { baseDir: proofRoot });
+  check("3D asset quality gate passes complete industry-grade receipt", assetQualityVerdict.ok, assetQualityVerdict.errors.join("; "));
+  const objOnlyReceipt: ThreeDAssetQualityReceipt = {
+    ...completeAssetQualityReceipt,
+    evidence: {
+      ...completeAssetQualityReceipt.evidence,
+      exports: { obj: "asset-quality/generated.obj" },
+    },
+  };
+  const objOnlyVerdict = verifyThreeDAssetQualityReceipt(objOnlyReceipt, { baseDir: proofRoot });
+  check("3D asset quality gate rejects OBJ-only industry-grade placeholder", objOnlyVerdict.ok === false && objOnlyVerdict.errors.some((e) => e.includes("OBJ-only") || e.includes("GLB")));
+  const missingPbrReceipt: ThreeDAssetQualityReceipt = {
+    ...completeAssetQualityReceipt,
+    evidence: {
+      ...completeAssetQualityReceipt.evidence,
+      pbrMaterialMapPaths: { baseColor: "asset-quality/baseColor.png" },
+    },
+  };
+  const missingPbrVerdict = verifyThreeDAssetQualityReceipt(missingPbrReceipt, { baseDir: proofRoot });
+  check("3D asset quality gate rejects missing PBR/UV/topology evidence", missingPbrVerdict.ok === false && missingPbrVerdict.errors.some((e) => e.includes("PBR material map")));
+
   console.log("\nResearchAssetMaker (personal-research-only procedural artifact):");
   const assetRoot = mkdtempSync(join(tmpdir(), "solo-smoke-asset-"));
   const researchAsset = makeResearchOnlyAsset({
@@ -941,6 +1009,7 @@ async function main() {
     "agent-api-contract": makeLoopFile("agent-api-contract.md"),
     "design-quality": makeLoopFile("design-quality.json"),
     "agent-chat-ux": makeLoopFile("agent-chat-ux.json"),
+    "asset-quality": makeLoopFile("asset-quality.json"),
   };
   loopReceipt.phases.find((phase) => phase.phase === "adapter")!.artifacts = {
     "adapter-contract": makeLoopFile("adapter-contract.json"),
@@ -955,6 +1024,7 @@ async function main() {
     "fresh-room-receipt": makeLoopFile("fresh-room-latest.json"),
     "design-quality": makeLoopFile("verify-design-quality.json"),
     "agent-chat-ux": makeLoopFile("verify-agent-chat-ux.json"),
+    "asset-quality": makeLoopFile("verify-asset-quality.json"),
   };
   const loopVerdict = verifyLoopRunReceipt(loopReceipt, { baseDir: proofRoot });
   check("loop runner passes only when every phase receipt exists", loopVerdict.ok, loopVerdict.errors.join("; "));

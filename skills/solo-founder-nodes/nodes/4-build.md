@@ -28,6 +28,13 @@ implementation. Copy the required workspace surfaces into the Component Contract
 artifact rail/workspace, tool/job timeline, cost/latency ledger, approval console, analytics loopback,
 provenance, trace export, and memory/taste export. A generic chat box around a hidden runner is not an
 acceptable app layer.
+0e. **Gate 3D asset quality before 3D code.** If the deliverable claims coherent, prototype,
+game/CAD/customer, or industry-grade 3D assets, run
+`npm run sfn -- 3d quality-plan --goal "<goal>" --target <target> --claim <level>` before mesh/export
+work. Copy the required semantic part graph, mesh stats, topology, UV, PBR, GLB/glTF, reopen, wireframe,
+UV screenshot, benchmark scorecard, and LOD/collision/pivot evidence into the Component Contract. A
+visible OBJ or primitive scaffold can be useful personal-research proof, but it is not a prototype or
+industry-grade asset claim.
 1. **Pick the stack template.** Detect the stack (Convex/React, Next.js, Streamlit, …) and announce which template you're applying. If unknown, say so and propose the closest one — do NOT invent a universal abstraction.
 2. **Map task → capabilities.** For each benchmark task, list the tools the agent must call, the model route(s), and the UI surfaces a human needs to run it and see the result. Present this map; **the human comments here to steer architecture** (e.g. "reuse the existing tool registry, don't fork it", "route long-context to X").
 2a. **Write the agent-ready API contract before tool code lands.** For every production tool in the capability map, produce an agent-facing contract and run `npm run sfn -- agent-api verify --contract <agent-api-contract.json>`. The contract must include semantic lifecycle, input/output schemas, provider schema parity, use/do-not-use guidance, preconditions, success signals, structured failure modes, recovery paths, governance, cost/latency class, and examples. Missing or failing contracts block implementation.
@@ -59,6 +66,10 @@ acceptable app layer.
   `npm run sfn -- chat-ux plan ...` before implementation and a proof receipt collected in Phase 6.
   Missing artifacts, visible tool status, cost/latency, approvals, analytics, provenance, traces, or
   memory/taste export means the app layer is not ready.
+- **3D ASSET QUALITY GATE:** any coherent/prototype/industry 3D asset diff needs an `asset-quality`
+  plan from `npm run sfn -- 3d quality-plan ...` before implementation and a proof receipt collected in
+  Phase 6. OBJ-only, random primitive, no-topology, no-UV, no-PBR, or no-reopen evidence means the
+  asset claim is not ready.
 
 ## Design Bridge (subroutine — mandatory for UI-facing build work)
 When the app-layer gap is a missing or visually-wrong surface, run this subroutine so IN-APP TRANSFER is achievable against a real design — not "make it pretty" guesswork. The design tool is optional; the design-quality receipt is mandatory. Full subroutine + templates: [`../references/design-bridge.md`](../references/design-bridge.md). Order is a hard guardrail: **brief FIRST, design output SECOND, implementation THIRD, browser-verify LAST.**

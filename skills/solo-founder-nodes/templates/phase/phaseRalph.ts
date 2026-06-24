@@ -68,7 +68,7 @@ export const phaseRalphGates: Record<LoopPhase, PhaseRalphGate[]> = {
     gate("build", "R", "Reality", "Read implementation decisions and design constraints before code.", ["implementation-decisions"]),
     gate("build", "A", "Acceptance", "Freeze product/API/design acceptance before mutation.", ["design-brief", "agent-api-contract"]),
     gate("build", "L", "Live substrate", "Build the real app surface and action protocol.", ["app-ui", "ai-chat-component", "typed-action-protocol"]),
-    gate("build", "P", "Proof", "Prove UI quality, agent chat workspace UX, and research-backed decisions.", ["design-quality", "agent-chat-ux", "research-backed-decision-receipts"]),
+    gate("build", "P", "Proof", "Prove UI quality, agent chat workspace UX, 3D asset quality, and research-backed decisions.", ["design-quality", "agent-chat-ux", "asset-quality", "research-backed-decision-receipts"]),
     gate("build", "H", "Harden", "Persist build decisions and remaining stubs.", ["phase-memory"]),
   ],
   adapter: [
@@ -82,7 +82,7 @@ export const phaseRalphGates: Record<LoopPhase, PhaseRalphGate[]> = {
     gate("verify", "R", "Reality", "Open the live target in a fresh room.", ["live-ui-target", "fresh-room-receipt"]),
     gate("verify", "A", "Acceptance", "Freeze proof manifest before collection.", ["proof-manifest"]),
     gate("verify", "L", "Live substrate", "Capture real proof artifacts.", ["playwright-trace", "fullscreen-video", "deployed-url", "generated-artifact", "export-reopen-proof"]),
-    gate("verify", "P", "Proof", "Produce independent verdict plus visual/design/agent-chat proof.", ["proof-verdict", "design-quality", "agent-chat-ux", "recording-audit"]),
+    gate("verify", "P", "Proof", "Produce independent verdict plus visual/design/agent-chat/asset-quality proof.", ["proof-verdict", "design-quality", "agent-chat-ux", "asset-quality", "recording-audit"]),
     gate("verify", "H", "Harden", "Route failures for iteration and persist safe memory.", ["failure-route", "phase-memory"]),
   ],
   iterate: [

@@ -45,6 +45,8 @@ npm run sfn -- fresh-room verify --receipt docs/eval/fresh-room/<case-id>/latest
 npm run sfn -- fresh-user init --case fresh-3d-001 --prompt "I want a 3D model app from pictures"
 npm run sfn -- trust verify --receipt trust-root-receipt.json
 npm run sfn -- 3d plan --goal "first-party picture/text to 3D app"
+npm run sfn -- 3d quality-plan --goal "game-ready picture to 3D asset" --target game --industry-grade
+npm run sfn -- 3d quality-verify --receipt asset-quality-receipt.json
 npm run sfn -- 3d make-asset --goal "personal research 3D scaffold" --project-id kestrel-seat --out-dir proof/assets
 npm run sfn -- engineering plan --goal "urgent replacement part from prior models" --risk safety_critical --urgency emergency
 npm run sfn -- engineering deconstruct-init --goal "clean-room deconstruct prior model" --project-id kestrel-seat
@@ -98,7 +100,9 @@ npm run sfn -- ledger verify <runId>        # re-verify a run's hash-chain (tamp
 - **`threeD/` - First-party 3D app lane**: reference-media intake, rights/provenance gate,
   first-principles component breakdown/originality delta, capture/reconstruction/3DGS/local
   generation/depth fallback/export/viewer-action plan with providers as comparator/fallback only.
-  Includes a deterministic personal-research-only OBJ asset maker for proof scaffolds.
+  Includes a deterministic personal-research-only OBJ asset maker for proof scaffolds and an
+  industry-grade asset quality gate that rejects OBJ-only/random-primitive/no-UV/no-PBR/no-topology
+  claims when the target is prototype, game/CAD/customer, or industry-grade output.
 - **`engineering/` - Safety-critical invention harness**: exact previous models allowed only in a
   non-exportable study sandbox; exportable designs require first-principles specs, hazard analysis,
   simulation/test receipts, qualified engineer review, and export eligibility. Break-glass emergency

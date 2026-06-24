@@ -94,6 +94,11 @@ receipt exist. For personal research scaffolds, use `npm run sfn -- 3d make-asse
 deterministic OBJ proof artifact from filtered spec/text and must remain personal-research-only, not
 production-ready, not human-use approved, and not an exact replica export. Commercial/deployment use
 is a user-owned external decision after their due diligence; the agent must not claim to approve it.
+For coherent or industry-grade asset claims, additionally run
+`npm run sfn -- 3d quality-plan ...` before build and
+`npm run sfn -- 3d quality-verify --receipt <asset-quality-receipt.json>` during verify. OBJ-only,
+random primitive, no-UV, no-PBR, no-topology, or no-reopen evidence cannot pass a prototype or
+industry-grade claim. Doctrine: [`references/industry-3d-assets.md`](references/industry-3d-assets.md).
 
 **Engineering invention harness:** for urgent, safety-critical, medical, life-support, field-repair, or
 "life and death" engineering requests, use

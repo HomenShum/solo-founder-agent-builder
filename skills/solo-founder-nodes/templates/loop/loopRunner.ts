@@ -12,6 +12,7 @@ export type PhaseRequirementId =
   | "agent-api-contract"
   | "design-quality"
   | "agent-chat-ux"
+  | "asset-quality"
   | "adapter-contract"
   | "official-scorer-binding"
   | "failure-hypothesis"
@@ -46,9 +47,9 @@ export const loopPhaseRequirements: Record<LoopPhase, PhaseRequirementId[]> = {
   discover: ["graph-context", "research-intake", "phase-memory"],
   benchmark: ["benchmark-choice", "heldout-manifest", "phase-memory"],
   setup: ["setup-gate", "phase-memory"],
-  build: ["agent-api-contract", "design-quality", "agent-chat-ux", "phase-memory"],
+  build: ["agent-api-contract", "design-quality", "agent-chat-ux", "asset-quality", "phase-memory"],
   adapter: ["adapter-contract", "official-scorer-binding", "phase-memory"],
-  verify: ["proof-verdict", "fresh-room-receipt", "design-quality", "agent-chat-ux", "phase-memory"],
+  verify: ["proof-verdict", "fresh-room-receipt", "design-quality", "agent-chat-ux", "asset-quality", "phase-memory"],
   iterate: ["failure-hypothesis", "rework-ledger", "phase-memory"],
 };
 
