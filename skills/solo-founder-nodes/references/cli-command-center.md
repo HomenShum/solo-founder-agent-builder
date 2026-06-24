@@ -22,6 +22,11 @@ Binding rule:
 
 Use `--json` when another tool needs a machine-readable snapshot.
 
+`npm run sfn -- judge current --project <path>` is the fresh-context completion guard. It reads
+`.solo/loop-state.json`, RALPH required receipts, recent events, and `.solo/proof-verdict.json` and
+returns `done | not_done | blocked | needs_research | needs_verification`. Use `--on-stop` from host
+idle/final-answer hooks; if `blockClaim` is true, the agent must continue or report the exact blocker.
+
 ## Universal event bus
 
 Agent hosts normalize native hook output into `SoloEvent` rows in `.solo/events.jsonl`.
@@ -30,14 +35,20 @@ Event vocabulary:
 
 ```text
 session.start
+session.created
+session.idle
 session.stop
+session.deleted
 phase.start
 phase.stop
 prompt.submit
+tool.before
 tool.pre
 tool.post
+tool.after
 tool.error
 file.read.pre
+file.changed
 file.write.pre
 file.write.post
 command.run.pre
@@ -49,6 +60,7 @@ memory.write
 eval.start
 eval.stop
 rework.recorded
+judge.verdict
 ```
 
 The event bus is observability, not a grader. A `tool.post` or `session.stop` event never proves the
@@ -60,6 +72,10 @@ Use:
 
 ```bash
 npm run sfn -- agent matrix
+npm run sfn -- hooks install --target pi --project . --dry-run
+npm run sfn -- hooks install --target hermes --project . --dry-run
+npm run sfn -- hooks install --target openclaw --project . --dry-run
+npm run sfn -- hooks install --target trae --mode generic-until-verified --project . --dry-run
 npm run sfn -- agent install-hooks --target codex --project . --dry-run
 npm run sfn -- agent collect --project .
 ```
@@ -71,12 +87,20 @@ Generic hosts cannot self-report completion.
 The hook installer writes or previews:
 
 - `.solo/bin/record-event`
+- `.solo/bin/sfn-pre-tool-policy.js`
+- `.solo/bin/sfn-post-tool-receipt.js`
+- `.solo/bin/sfn-session-idle-judge.js`
+- `.solo/bin/sfn-final-answer-guard.js`
+- `.solo/bin/sfn-inject-loop-context.js`
 - `AGENTS.md`
 - host-specific hook or rules files such as `.codex/config.toml`, `.codex/hooks.json`,
-  `.claude/settings.json`, `.windsurf/hooks.json`, `.devin/rules/...`, and generic rules files.
+  `.claude/settings.json`, `.windsurf/hooks.json`, `.pi/hook/hooks.yaml`, `.hermes/hooks.yaml`,
+  `.openclaw/hooks/solo-session-memory/HOOK.md`, `.trae/rules/...`, and generic rules files.
 
 Host-specific files are adapter templates. After installation, run the host's actual conformance or
 proof flow before treating native hook events as complete coverage.
+
+Detailed host hook doctrine: [`host-hooks-fresh-judge.md`](host-hooks-fresh-judge.md).
 
 ## NodeRoom handoff
 

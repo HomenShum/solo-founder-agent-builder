@@ -18,8 +18,10 @@ import {
   readSoloEventLog,
   recordSoloEvent,
   writeHookInstallPlan,
+  type HookInstallMode,
   type SupportedHookTarget,
 } from "../events/soloEventBus";
+import { judgeCurrentLoop } from "../judge/freshContextJudge";
 import {
   make3dAgentResearchPack,
   proofScopes,
@@ -330,9 +332,16 @@ async function openProjectMemory(projectPath: string) {
 }
 
 function parseHookTarget(value?: string): SupportedHookTarget {
-  const allowed = ["all", ...agentHostMatrix().map((row) => row.id)];
+  const allowed = ["all", "pi", ...agentHostMatrix().map((row) => row.id)];
   if (value && allowed.includes(value)) return value as SupportedHookTarget;
   throw new Error(`unsupported agent hook target '${value ?? ""}' (expected one of: ${allowed.join(", ")})`);
+}
+
+function parseHookMode(value?: string): HookInstallMode {
+  const mode = value ?? "native";
+  const allowed: HookInstallMode[] = ["native", "generic-until-verified"];
+  if (allowed.includes(mode as HookInstallMode)) return mode as HookInstallMode;
+  throw new Error(`unsupported hook install mode '${mode}' (expected one of: ${allowed.join(", ")})`);
 }
 
 function writeReceipt(projectPath: string, relativePath: string, payload: unknown) {
@@ -347,6 +356,7 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   smoke                       run the substrate proof (expect all assertions to pass)
   conformance                 run the cross-agent portability probe (PASS + receipt)
   dashboard [--project <path>] [--json] [--events <n>]
+  judge current [--project <path>] [--goal <g>] [--last-message <text>] [--on-stop] [--strict] [--out <file>]
   event record --event <name> --agent <host> [--project <path>] [--phase <p>] [--milestone <R|A|L|P|H>] [--status ok|error|blocked|started|stopped|info] [--message <m>]
   context inspect [root]      inspect Graphify-style graph context receipt
   control start --project <p> --goal <g> [--budget <n>] [--root <path>]
@@ -364,8 +374,9 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   phase status|verify --phase <p> [--stage <R|A|L|P|H>] [--project <path>]
   phase complete --phase <p> --stage <R|A|L|P|H> --receipt <id>... [--project <path>]
   phase route --to <phase> --reason <text> [--evidence <path>] [--project <path>]
+  hooks install --target <pi|hermes|openclaw|trae|host|all> [--project <path>] [--mode native|generic-until-verified] [--dry-run]
   agent list|matrix
-  agent install-hooks --target <host|all> [--project <path>] [--dry-run]
+  agent install-hooks --target <host|all> [--project <path>] [--mode native|generic-until-verified] [--dry-run]
   agent run --host <host> --goal <g> [--project <path>] [--command <cmd>] [--execute]
   agent fanout --host <h1,h2> --goal <g> [--project <path>] [--out <file>]
   agent collect [--project <path>] [--limit <n>]
@@ -475,6 +486,45 @@ async function main() {
         console.log(renderDashboard(projectPath, { eventLimit }));
       }
       process.exit(0);
+    }
+    case "judge": {
+      const sub = rest[0];
+      if (sub !== "current") {
+        console.error("judge current [--project <path>] [--goal <g>] [--last-message <text>] [--on-stop] [--strict] [--out <file>]");
+        process.exit(2);
+      }
+      const projectPath = resolve(flag(rest, "--project", ".")!);
+      const result = judgeCurrentLoop({
+        projectPath,
+        initialUserGoal: flag(rest, "--goal"),
+        lastAssistantMessage: flag(rest, "--last-message"),
+        eventLimit: Number(flag(rest, "--events", "20")),
+      });
+      const hookDecision = rest.includes("--on-stop")
+        ? {
+            decision: result.verdict.blockClaim ? "block" : "allow",
+            reason: result.verdict.reason,
+            requiredNextActions: result.verdict.requiredNextActions,
+          }
+        : undefined;
+      recordSoloEvent(projectPath, {
+        event: "judge.verdict",
+        agentHost: flag(rest, "--agent", "sfn-judge")!,
+        status: result.verdict.blockClaim ? "blocked" : "ok",
+        message: result.verdict.reason,
+        source: rest.includes("--on-stop") ? "sfn-judge-stop-hook" : "sfn-judge",
+        payload: {
+          verdict: result.verdict.verdict,
+          confidence: result.verdict.confidence,
+          blockClaim: result.verdict.blockClaim,
+          shouldContinueMainAgent: result.verdict.shouldContinueMainAgent,
+        },
+      });
+      const payload = { projectPath, ...result, hookDecision };
+      const out = flag(rest, "--out");
+      if (out) writeJson(resolve(out), payload);
+      console.log(JSON.stringify(out ? { out: resolve(out), ...payload } : payload, jbig, 2));
+      process.exit((rest.includes("--strict") || rest.includes("--on-stop")) && result.verdict.blockClaim ? 1 : 0);
     }
     case "event": {
       const sub = rest[0];
@@ -1496,6 +1546,22 @@ async function main() {
       console.error("trust: init --run <id> --verifier <cmd> [--signed <path>] [--out <file>] | verify --receipt <file>");
       process.exit(2);
     }
+    case "hooks": {
+      const sub = rest[0];
+      if (sub !== "install") {
+        console.error("hooks install --target <pi|hermes|openclaw|trae|host|all> [--project <path>] [--mode native|generic-until-verified] [--dry-run]");
+        process.exit(2);
+      }
+      const target = parseHookTarget(flag(rest, "--target", "generic"));
+      const mode = parseHookMode(flag(rest, "--mode", target === "trae" ? "generic-until-verified" : "native"));
+      const projectPath = resolve(flag(rest, "--project", ".")!);
+      const dryRun = rest.includes("--dry-run");
+      const result = dryRun
+        ? { ...makeHookInstallPlan(target, new Date().toISOString(), { mode }), dryRun: true, writtenFiles: [] as string[] }
+        : writeHookInstallPlan(projectPath, target, { dryRun: false, mode });
+      console.log(JSON.stringify({ projectPath, result }, jbig, 2));
+      process.exit(0);
+    }
     case "agent": {
       const sub = rest[0];
       if (sub === "list") {
@@ -1509,11 +1575,12 @@ async function main() {
       }
       if (sub === "install-hooks") {
         const target = parseHookTarget(flag(rest, "--target", "generic"));
+        const mode = parseHookMode(flag(rest, "--mode", target === "trae" ? "generic-until-verified" : "native"));
         const projectPath = resolve(flag(rest, "--project", ".")!);
         const dryRun = rest.includes("--dry-run");
         const result = dryRun
-          ? { ...makeHookInstallPlan(target), dryRun: true, writtenFiles: [] as string[] }
-          : writeHookInstallPlan(projectPath, target, { dryRun: false });
+          ? { ...makeHookInstallPlan(target, new Date().toISOString(), { mode }), dryRun: true, writtenFiles: [] as string[] }
+          : writeHookInstallPlan(projectPath, target, { dryRun: false, mode });
         console.log(JSON.stringify({ projectPath, result }, jbig, 2));
         process.exit(0);
       }

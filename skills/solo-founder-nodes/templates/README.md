@@ -19,6 +19,7 @@ npm run sfn -- doctor                       # node + deps readiness
 npm run sfn -- smoke                        # the substrate proof (expect all assertions to pass)
 npm run sfn -- conformance                  # the cross-agent portability probe (PASS + receipt)
 npm run sfn -- dashboard --project .        # command-center view over loop/proof/events/agents/artifacts
+npm run sfn -- judge current --project . --on-stop
 npm run sfn -- event record --event tool.post --agent codex --project .
 npm run sfn -- context inspect <app-root>   # inspect Graphify-style graph context readiness
 npm run sfn -- control start --project <p> --goal <g> --budget 5 --root <app-root>
@@ -34,6 +35,10 @@ npm run sfn -- loop verify --milestone <R|A|L|P|H> --project <path>
 npm run sfn -- phase verify --phase verify --stage P --project <path>
 npm run sfn -- phase route --to build --reason "live proof failed at chat action protocol" --project <path>
 npm run sfn -- agent matrix                 # host adapters, hook files, proof mode, self-report policy
+npm run sfn -- hooks install --target pi --project . --dry-run
+npm run sfn -- hooks install --target hermes --project . --dry-run
+npm run sfn -- hooks install --target openclaw --project . --dry-run
+npm run sfn -- hooks install --target trae --mode generic-until-verified --project . --dry-run
 npm run sfn -- agent install-hooks --target codex --project . --dry-run
 npm run sfn -- noderoom run-fresh-room --case FR-010 --base-url <url> --headed --record-video --trace on --focus-mode on --model-mode top_paid --budget benchmark_completion
 npm run sfn -- run --project <path> --goal <g> --out loop-run.json
@@ -80,7 +85,11 @@ npm run sfn -- ledger verify <runId>        # re-verify a run's hash-chain (tamp
 - **`control/` - `SoloControlPlane`**: durable loop state for triggers, checkpoints, approvals, budget
   stops, trace spans, worktree leases, and trace-sourced improvement candidates.
 - **`events/` - `SoloEvent` bus + agent matrix**: normalizes agent hooks into `.solo/events.jsonl`,
-  generates host hook/rules plans, and blocks self-reported completion for no-hooks agents.
+  generates Pi/Hermes/OpenClaw/Trae/Codex/etc. hook/rules plans, and blocks self-reported completion
+  for no-hooks or generic-until-verified agents.
+- **`judge/` - Fresh-context judge**: reads loop state, required receipts, events, and proof verdict
+  to return `done | not_done | blocked | needs_research | needs_verification`; stop/final-answer
+  hooks use it to continue the loop instead of trusting chat memory.
 - **`dashboard/` - CLI command center**: renders the active loop, proof verdict, metrics, artifacts,
   recent events, runtime, and agent host policy from local receipts.
 - **`research/` - Research Spine**: research-backed decision receipts, claim gates, proof artifacts,

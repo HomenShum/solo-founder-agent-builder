@@ -33,7 +33,7 @@ ok("4 non-negotiables present", nn.every((n) => M.includes(n)), nn.filter((n) =>
 const nodes = ["1-discover", "2-benchmark", "3-setup", "4-build", "5-adapter", "6-verify", "7-iterate"];
 ok("7 node playbooks present", nodes.every((n) => existsSync(join(skill, "nodes", `${n}.md`))));
 ok("phase order is verify then iterate", /adapter\s*\|\s*wire[\s\S]*\|\s*6\s*\|\s*verify[\s\S]*\|\s*7\s*\|\s*iterate/i.test(master));
-const refs = ["honest-lane", "memory", "context-substrate", "control-plane", "cli-command-center", "design-bridge", "agent-chat-ux", "gstack-bridge", "benchmarks", "research", "research-spine", "industry-3d-assets"];
+const refs = ["honest-lane", "memory", "context-substrate", "control-plane", "cli-command-center", "host-hooks-fresh-judge", "design-bridge", "agent-chat-ux", "gstack-bridge", "benchmarks", "research", "research-spine", "industry-3d-assets"];
 ok("references present", refs.every((r) => existsSync(join(skill, "references", `${r}.md`))));
 
 // 4. Runnable substrate files present (Node + the smoke).
@@ -45,6 +45,7 @@ ok("templates substrate present", [
   "context/graphContext.ts",
   "control/controlPlane.ts",
   "events/soloEventBus.ts",
+  "judge/freshContextJudge.ts",
   "dashboard/dashboard.ts",
   "phase/phaseRalph.ts",
   "setup/externalSetupGate.ts",
@@ -65,6 +66,7 @@ ok("templates substrate present", [
 ].every((f) => existsSync(join(skill, "templates", f))));
 ok("context/control directives present", /context-substrate/i.test(master) && /control-plane/i.test(master));
 ok("CLI command center directive present", /CLI command center/i.test(master) && /SoloEvent/i.test(master) && /dashboard --project/i.test(master));
+ok("fresh-context judge and host hooks directive present", /Fresh-context judge/i.test(master) && /hooks install/i.test(master) && /judge current/i.test(master));
 ok("external setup gate directive present", /External setup gate/i.test(master) && /deterministic prework/i.test(master) && /server-side secret/i.test(master));
 ok("optional agent host setup directive present", /Optional agent host setup/i.test(master) && /agents openrouter-plan/i.test(master) && /OpenRouter model catalog/i.test(master));
 ok("research-backed implementation directive present", /research-spine/i.test(master) && /research-backed implementation/i.test(master));

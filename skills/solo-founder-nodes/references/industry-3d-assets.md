@@ -14,16 +14,41 @@ building or verifying it:
 
 Research anchors:
 
-- Production-ready 3D asset research argues that visual plausibility alone is insufficient; usable
-  assets need topology, UVs, PBR materials, editability/rigging where relevant, and engine metadata.
-- Hunyuan3D 2.1 separates shape generation from mesh-conditioned PBR texture generation, including
-  albedo/baseColor, metallic, and roughness maps.
-- P3D-Bench evaluates executability, geometric fidelity, topology, semantic alignment, constraints,
-  and part-level structure.
-- AssetGen-style evaluation inspects final mesh, texture, UV layout, and wireframe in an interactive
-  3D viewer.
-- glTF/glTF PBR and engine docs set practical interchange/import expectations; game-ready claims need
-  runtime metadata such as LOD, collision, and pivot receipts.
+- [P3D-Bench](https://arxiv.org/abs/2606.11152) evaluates parametric/code-based 3D generation on
+  executability, geometric fidelity, topology, text/visual constraints, multiview semantic alignment,
+  and part-level structure. That is the right benchmark lens for "does this model make coherent
+  parts?" instead of "is there any mesh on screen?"
+- [TRELLIS](https://arxiv.org/abs/2412.01506) uses structured 3D latents that can decode to meshes,
+  3D Gaussians, and radiance fields, which supports the product requirement to choose the output
+  representation and still keep geometry/appearance information aligned.
+- [DreamGaussian](https://arxiv.org/abs/2309.16653) shows why a first-party pipeline should convert
+  generated 3D Gaussians into textured meshes and refine textures in UV space before downstream use.
+- [Hunyuan3D 2.1](https://arxiv.org/html/2506.15442v1) and its public
+  [Hunyuan3D-Paint 2.1 notes](https://huggingface.co/spaces/tencent/Hunyuan3D-2.1/blob/main/hy3dpaint/README.md)
+  reinforce a two-stage asset bar: shape generation plus mesh-conditioned PBR texture generation
+  producing albedo/baseColor, metallic, and roughness maps.
+- [MaterialMVP](https://arxiv.org/html/2503.10289v2) reinforces the same PBR requirement: multi-view
+  texture generation must align albedo, metallic, and roughness maps across views.
+- [glTF 2.0](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html) and
+  [Khronos glTF PBR](https://www.khronos.org/gltf/pbr/) define practical metallic-roughness PBR
+  interchange expectations. [Blender's glTF exporter](https://docs.blender.org/manual/en/latest/addons/import_export/scene_gltf2.html)
+  is the DCC reopen/export sanity check.
+- [Unity LOD import](https://docs.unity3d.com/2020.3/Documentation/Manual/importing-lod-meshes.html)
+  and [Unreal static mesh pipeline](https://dev.epicgames.com/documentation/unreal-engine/fbx-static-mesh-pipeline-in-unreal-engine?lang=en-US)
+  set practical runtime expectations for LOD, collision, sockets/pivots, and importable mesh packages.
+
+Pipeline implication:
+
+1. Decompose first: semantic part graph, dimensions/relations, material intent, and protected-expression
+   filter.
+2. Generate structure before polish: parametric/part-aware mesh or structured latent output before
+   texturing.
+3. Convert/refine: mesh extraction, cleanup/retopo, UV unwrap, PBR material maps, and texture
+   consistency checks.
+4. Prove utility: GLB/glTF export, Blender/DCC reopen, Three.js viewer proof, wireframe/UV/PBR
+   screenshots, and target-specific LOD/collision/pivot/rig receipts.
+5. Score held-out: compare against first-party baseline and external providers on semantic alignment,
+   mesh validity, topology, editability, texture/PBR quality, latency, cost, and UI completion.
 
 Executable gate:
 

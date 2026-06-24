@@ -45,6 +45,7 @@ import { makeFreshUserEmulationPlan, verifyFreshUserEmulationReceipt, type Fresh
 import { makeTrustRootReceipt, verifyTrustRootReceipt } from "./trust/trustRoot";
 import { makeDashboardSnapshot, renderDashboard } from "./dashboard/dashboard";
 import { formatAgentMatrix, makeAgentMatrixRows, makeHookInstallPlan, readSoloEvents, recordSoloEvent } from "./events/soloEventBus";
+import { judgeCurrentLoop } from "./judge/freshContextJudge";
 import {
   completeRalphMilestone,
   createRalphLedger,
@@ -1131,6 +1132,37 @@ async function main() {
   check("hook plan writes shared recorder and Codex hook files", codexHookPlan.files.some((file) => file.path === ".solo/bin/record-event") && codexHookPlan.files.some((file) => file.path === ".codex/config.toml"));
   check("hook plan writes concrete lifecycle hook scripts", [".codex/hooks/solo-pre-tool.js", ".codex/hooks/solo-post-tool.js", ".codex/hooks/solo-stop.js"].every((path) => codexHookPlan.files.some((file) => file.path === path && file.executable === true)));
   check("hook plan carries no-self-report warning", codexHookPlan.warnings.some((warning) => warning.includes("Generic/no-hooks agents")));
+
+  const piHookPlan = makeHookInstallPlan("pi", "2026-06-24T00:00:00.000Z");
+  check("Pi hook plan writes YAML pack plus fresh judge bins", piHookPlan.files.some((file) => file.path === ".pi/hook/hooks.yaml") && piHookPlan.files.some((file) => file.path === ".solo/bin/sfn-session-idle-judge.js"));
+  const hermesHookPlan = makeHookInstallPlan("hermes", "2026-06-24T00:00:00.000Z");
+  check("Hermes hook plan writes shell hooks plus plugin scaffold", hermesHookPlan.files.some((file) => file.path === ".hermes/hooks.yaml") && hermesHookPlan.files.some((file) => file.path === ".hermes/plugins/solo_founder/plugin.py"));
+  const openClawHookPlan = makeHookInstallPlan("openclaw", "2026-06-24T00:00:00.000Z");
+  check("OpenClaw hook plan writes session-memory hook and plugin scaffold", openClawHookPlan.files.some((file) => file.path === ".openclaw/hooks/solo-session-memory/HOOK.md") && openClawHookPlan.files.some((file) => file.path === ".openclaw/plugin/solo-founder/plugin.ts"));
+  const traeHookPlan = makeHookInstallPlan("trae", "2026-06-24T00:00:00.000Z", { mode: "generic-until-verified" });
+  check("Trae hook plan stays generic-until-verified", traeHookPlan.files.some((file) => file.path === ".trae/rules/solo-founder-agent-builder.md") && traeHookPlan.warnings.some((warning) => warning.includes("generic-until-verified")));
+
+  const noLoopJudgeRoot = mkdtempSync(join(tmpdir(), `solo-no-loop-judge-${process.pid}-`));
+  const noLoopJudge = judgeCurrentLoop({ projectPath: noLoopJudgeRoot, lastAssistantMessage: "done" });
+  check("fresh-context judge blocks completion without loop-state", noLoopJudge.verdict.verdict === "blocked" && noLoopJudge.verdict.blockClaim && noLoopJudge.verdict.missingReceipts.includes(".solo/loop-state.json"));
+
+  const judgeRoot = mkdtempSync(join(tmpdir(), `solo-judge-${process.pid}-`));
+  const judgeLedger = createRalphLedger({ repoPath: judgeRoot, goal: "prove a coherent 3D asset pipeline", now: "2026-06-24T00:00:00.000Z" });
+  const missingResearchJudge = judgeCurrentLoop({ projectPath: judgeRoot, lastAssistantMessage: "done" });
+  check("fresh-context judge routes missing discover receipts to research", missingResearchJudge.verdict.verdict === "needs_research" && missingResearchJudge.verdict.blockClaim && missingResearchJudge.verdict.missingReceipts.some((receipt) => receipt.includes("research-spine")));
+  const judgeReceipt = (relative: string, body = "ok") => {
+    const abs = join(judgeLedger.paths.soloDir, relative);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, body, "utf8");
+    return relative;
+  };
+  completeRalphMilestone(judgeRoot, "R", [
+    judgeReceipt("receipts/R-reality/capability-spec.json"),
+    judgeReceipt("receipts/R-reality/research-spine.json"),
+    judgeReceipt("receipts/R-reality/graph-context.json"),
+  ], "2026-06-24T00:01:00.000Z");
+  const notWholeLoopDoneJudge = judgeCurrentLoop({ projectPath: judgeRoot, lastAssistantMessage: "done" });
+  check("fresh-context judge refuses whole-loop done after only R receipts", notWholeLoopDoneJudge.verdict.verdict === "not_done" && notWholeLoopDoneJudge.verdict.blockClaim && notWholeLoopDoneJudge.verdict.requiredNextActions.some((action) => action.command?.includes("loop start --from A")));
 
   const dashboard = renderDashboard(ralphRoot, { eventLimit: 8 });
   const dashboardSnapshot = makeDashboardSnapshot(ralphRoot, { eventLimit: 8 });

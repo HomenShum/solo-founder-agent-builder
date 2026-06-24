@@ -58,9 +58,16 @@ worktree leases, improvement candidates). Specs:
 **Command center:** use `npm run sfn -- dashboard --project <path>` as the clean visualization of the
 loop. Hooks observe the agent; receipts prove the work; the CLI makes the whole loop visible. Normalize
 agent telemetry into `.solo/events.jsonl` with `SoloEvent`, inspect adapters with
-`npm run sfn -- agent matrix`, and remember that generic/no-hooks agents cannot self-report
-completion. Spec: [`references/cli-command-center.md`](references/cli-command-center.md); templates in
-[`templates/events/`](templates/events/) and [`templates/dashboard/`](templates/dashboard/).
+`npm run sfn -- agent matrix`, install host adapters with
+`npm run sfn -- hooks install --target <pi|hermes|openclaw|trae|host|all>`, and remember that
+generic/no-hooks agents cannot self-report completion. Stop/idle/final-answer hooks must call
+`npm run sfn -- judge current --project . --on-stop`; if `blockClaim` is true, continue the loop or
+report the exact blocker. The fresh-context judge returns `done` only when the full RALPH loop is
+complete; missing research/proof receipts route to `needs_research` or `needs_verification`. Specs:
+[`references/cli-command-center.md`](references/cli-command-center.md) and
+[`references/host-hooks-fresh-judge.md`](references/host-hooks-fresh-judge.md); templates in
+[`templates/events/`](templates/events/), [`templates/judge/`](templates/judge/), and
+[`templates/dashboard/`](templates/dashboard/).
 
 **Nested phase RALPH:** every phase has its own `R/A/L/P/H` gates, not just the macro loop. Use
 `npm run sfn -- phase verify --phase <phase>` and route verified failures with

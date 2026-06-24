@@ -81,14 +81,28 @@ runtime, metrics, artifacts, and recent events. The slogan is binding:
 **Hooks observe the agent. Receipts prove the work. The CLI makes the whole loop visible.**
 
 All agent hosts normalize telemetry into the universal `SoloEvent` bus in `.solo/events.jsonl`:
-`session.start`, `session.stop`, `phase.start`, `phase.stop`, `prompt.submit`, `tool.pre`,
-`tool.post`, `tool.error`, `file.read.pre`, `file.write.pre`, `file.write.post`,
+`session.created`, `session.start`, `session.idle`, `session.stop`, `session.deleted`,
+`phase.start`, `phase.stop`, `prompt.submit`, `tool.before`, `tool.pre`, `tool.post`,
+`tool.after`, `tool.error`, `file.read.pre`, `file.changed`, `file.write.pre`, `file.write.post`,
 `command.run.pre`, `command.run.post`, `browser.proof.start`, `browser.proof.stop`,
-`receipt.write`, `memory.write`, `eval.start`, `eval.stop`, and `rework.recorded`. Native hooks are
+`receipt.write`, `memory.write`, `eval.start`, `eval.stop`, `rework.recorded`, and
+`judge.verdict`. Native hooks are
 allowed when a host supports them; otherwise use the external proof wrapper. Generic/no-hooks agents
 must not self-report completion. Install or inspect adapter plans with
 `npm run sfn -- agent matrix` and
-`npm run sfn -- agent install-hooks --target <codex|claude-code|windsurf|devin|cursor|trae|openclaw|hermes|generic|all> --project <path>`.
+`npm run sfn -- hooks install --target <pi|hermes|openclaw|trae|codex|claude-code|windsurf|devin|cursor|generic|all> --project <path>`.
+Use `--mode generic-until-verified` for hosts such as Trae until native hooks are proven. The
+compatibility alias `agent install-hooks` still works, but the canonical surface is `hooks install`.
+
+**Fresh-context judge:** stop/idle/final-answer hooks must call
+`npm run sfn -- judge current --project <path> --on-stop`. The judge reads only durable evidence:
+`.solo/loop-state.json`, `.solo/events.jsonl`, `.solo/receipts`, `.solo/proof-verdict.json`, and the
+RALPH receipt requirements. It returns `done | not_done | blocked | needs_research |
+needs_verification`. `done` is legal only when the full RALPH loop is complete; a locally completed
+milestone still returns `not_done` with the next command. Missing discover receipts route to
+`needs_research`; missing proof verdicts route to `needs_verification`. Final-answer hooks block when
+`blockClaim` is true. Native where available, generic wrapper when not, receipts always. Doctrine:
+[`references/host-hooks-fresh-judge.md`](references/host-hooks-fresh-judge.md).
 
 NodeRoom proof runs are surfaced through `npm run sfn -- noderoom run-fresh-room ...`, but a handoff
 receipt is not a pass. Only verified fresh-room receipts, trace/video artifacts, visual recording
