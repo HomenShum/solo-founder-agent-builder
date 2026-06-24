@@ -168,10 +168,12 @@ export function make3dAgentResearchPack(args: {
     source("tripo", "Tripo 3D", "https://www.tripo3d.ai/", "product", "3d-generation"),
     source("hyper3d-rodin", "Hyper3D Rodin", "https://hyper3d.ai/", "product", "3d-generation"),
     source("luma", "Luma AI", "https://lumalabs.ai/", "product", "3d-generation"),
+    source("lovart", "Lovart AI", "https://www.lovart.ai/", "product", "3d-generation"),
     source("colmap", "COLMAP Tutorial", "https://colmap.github.io/tutorial.html", "official-doc", "3d-generation"),
     source("msplat", "msplat", "https://github.com/rayanht/msplat", "product", "3d-generation"),
     source("depth-anything", "Depth Anything 3 CLI", "https://github.com/ByteDance-Seed/Depth-Anything-3/blob/main/docs/CLI.md", "official-doc", "3d-generation"),
     source("vercel", "Vercel Platform", "https://vercel.com/docs", "official-doc", "deployment"),
+    source("gmi-agentbox", "GMI AgentBox Marketplace Overview", "https://docs.gmicloud.ai/agentbox-marketplace/overview", "official-doc", "deployment"),
     source("supabase", "Supabase Docs", "https://supabase.com/docs", "official-doc", "deployment"),
     source("convex", "Convex Docs", "https://docs.convex.dev/home", "official-doc", "deployment"),
     source("gstack", "garrytan/gstack", "https://github.com/garrytan/gstack", "product", "coding-agent"),
@@ -189,6 +191,12 @@ export function make3dAgentResearchPack(args: {
       userNeed: "Use a screenshot, social post, video frame, movie/game reference, or textbook image as inspiration for a 3D asset.",
       deliverable: "A rights-aware reference-media workflow that either generates a transformed/original 3D asset, asks for proof of rights, or blocks exact extraction.",
       evidence: "Screenshot request mentions taking cool 3D assets from social posts/videos/movies/textbooks and asking if they can 3D print or build it into an app.",
+    },
+    {
+      id: "req-brush-source-selection",
+      userNeed: "A founder can brush over the object in a photo and use that crop as the 3D target while leaving the rest as context.",
+      deliverable: "A brush/source-selection receipt, crop/context split, and UI proof that the selected object enters the 3D generation lane.",
+      evidence: "Latest screenshots request a Lovart-inspired brush feature to remove surroundings or edit a specific part before converting the cropped picture to 3D.",
     },
     {
       id: "req-first-principles-breakdown",
@@ -213,6 +221,12 @@ export function make3dAgentResearchPack(args: {
       userNeed: "Chat with an AI agent that acts inside the 3D viewer instead of just describing.",
       deliverable: "Structured viewer actions such as fly_to, look_at, rotate, zoom, highlight, and reset_view.",
       evidence: "Devpost reference screenshot describes MCP-style JSON camera actions.",
+    },
+    {
+      id: "req-shared-scene-voice-camera",
+      userNeed: "Generated assets should coexist in one environment, accept voice/chat direction, and prepare a laptop-camera animation lane.",
+      deliverable: "A scene manifest, voice transcript handoff, and permission-gated camera animation contract before claiming webcam animation works.",
+      evidence: "Latest roadmap asks for generated characters/table/cups in one environment, voice for agents/models, chat transcription, and laptop-camera animation.",
     },
     {
       id: "req-software-export",
@@ -289,6 +303,12 @@ export function make3dAgentResearchPack(args: {
       grader: "Verify source manifest, ownership/license mode, blocked exact-extraction state, and similarity/transformative-use notes are present before export.",
       sourceIds: ["usco-ai", "usco-fair-use", "youtube-fair-use"],
     },
+    {
+      id: "metric-source-isolation-scene-contract",
+      name: "Source isolation and scene contract",
+      grader: "Verify the live UI records a brush/crop receipt, preserves surrounding media as context, renders a shared scene stack, and labels voice/camera lanes as transcript/permission-gated contracts.",
+      sourceIds: ["webarena", "osworld", "gpt-eval-3d"],
+    },
   ];
 
   const proofArtifacts: ProofArtifact[] = [
@@ -325,6 +345,18 @@ export function make3dAgentResearchPack(args: {
       risk: "Copyright, trademark, publicity, and platform-term risks vary by source; the product must block unverified exact copying and preserve provenance receipts.",
     },
     {
+      requirementId: "req-brush-source-selection",
+      chosenApproach: "Add brush/source selection before generation: the marked crop becomes the target object and unmarked pixels remain context for scene/style only.",
+      rejectedAlternatives: [
+        "Treating the whole screenshot as the target object.",
+        "Letting the model infer protected or irrelevant surroundings without a user-visible crop receipt.",
+      ],
+      researchSourceIds: ["webarena", "osworld", "gpt-eval-3d"],
+      inspirationSourceIds: ["lovart", "usco-ai", "usco-fair-use"],
+      evalMetricIds: ["metric-source-isolation-scene-contract", "metric-rights-provenance", "metric-component-originality"],
+      risk: "Brush selection improves user control but does not remove rights/provenance duties; selected objects still require allowed-use mode and originality delta.",
+    },
+    {
       requirementId: "req-first-principles-breakdown",
       chosenApproach: "Force a pre-generation decomposition pass that converts references into component trees, functional primitives, material constraints, and an original design spec with explicit deltas from the source.",
       rejectedAlternatives: [
@@ -351,9 +383,9 @@ export function make3dAgentResearchPack(args: {
     },
     {
       requirementId: "req-3d-generate",
-      chosenApproach: "Build v1 around provider-backed single-image/text-to-3D generation with GLB/USDZ export and a mock lane for deterministic smoke tests.",
+      chosenApproach: "Build v1 around a first-party deterministic scaffold plus self-hosted/open-model lanes when compute is available; provider APIs remain optional comparator or acceleration lanes with explicit user approval.",
       rejectedAlternatives: [
-        "Local arbitrary multi-photo reconstruction as the default v1.",
+        "Making provider API keys mandatory before the core app, UI, receipts, and export proof work.",
         "Claiming production-ready humanoid rigging or motion tracking before a separate proof lane exists.",
       ],
       researchSourceIds: ["instantmesh", "trellis", "hunyuan3d-21", "hy3d-bench"],
@@ -371,11 +403,23 @@ export function make3dAgentResearchPack(args: {
       risk: "The action protocol proves viewer control; it does not prove semantic 3D understanding unless the UI trace and eval score also pass.",
     },
     {
+      requirementId: "req-shared-scene-voice-camera",
+      chosenApproach: "Require a scene manifest plus transcript/camera contracts: assets can share one environment, voice becomes a chat transcript, and webcam animation remains gated until camera permission/tracking/rig receipts exist.",
+      rejectedAlternatives: [
+        "Only generating isolated single meshes with no multi-asset scene state.",
+        "Claiming webcam animation works because a button exists.",
+      ],
+      researchSourceIds: ["webarena", "osworld", "react"],
+      inspirationSourceIds: ["lovart", "gmi-agentbox"],
+      evalMetricIds: ["metric-source-isolation-scene-contract", "metric-agentic-ui-completion", "metric-editability-export"],
+      risk: "The UI may prove the contract and workflow readiness; real webcam motion tracking and rigging still require a separate verified lane.",
+    },
+    {
       requirementId: "req-deploy-use",
-      chosenApproach: "Default to Next.js on Vercel with Supabase or Convex persistence and object storage for source images plus generated assets.",
+      chosenApproach: "Default to a deployed web app with persistence/object storage; treat GMI AgentBox as an optional packaged-agent deployment and marketplace path, not a required 3D model provider.",
       rejectedAlternatives: ["Local-only demo with no customer URL.", "Ephemeral in-memory assets that disappear after the session."],
       researchSourceIds: ["coding-agents-e2e", "swe-evo", "rigorous-agent-benchmarks"],
-      inspirationSourceIds: ["vercel", "supabase", "convex"],
+      inspirationSourceIds: ["vercel", "supabase", "convex", "gmi-agentbox"],
       evalMetricIds: ["metric-agentic-ui-completion", "metric-cost-latency"],
       risk: "Deployment proof must include the actual live URL and persistence receipts, not just build output.",
     },
@@ -430,6 +474,16 @@ export function make3dAgentResearchPack(args: {
       proofArtifactIds: ["artifact-component-breakdown", "artifact-rights-provenance"],
     },
     {
+      id: "claim-brush-scene-contract",
+      requirementId: "req-brush-source-selection",
+      claimType: "capability",
+      claim: "The first-party 3D flow supports brush/source isolation and shared-scene proof only when the live UI trace shows crop selection, scene stack state, and transcript/camera contract lanes.",
+      status: "supported",
+      risk: "major",
+      sourceIds: ["webarena", "osworld", "gpt-eval-3d"],
+      proofArtifactIds: ["artifact-playwright-trace", "artifact-playwright-video", "artifact-component-breakdown"],
+    },
+    {
       id: "claim-engineering-harness-safe-export",
       requirementId: "req-engineering-study-replica",
       claimType: "capability",
@@ -443,10 +497,10 @@ export function make3dAgentResearchPack(args: {
       id: "claim-v1-realistic",
       requirementId: "req-3d-generate",
       claimType: "plan",
-      claim: "A realistic v1 is provider-backed image/text-to-3D with export and viewer proof, not arbitrary local reconstruction.",
+      claim: "A realistic v1 proves the product loop with a first-party deterministic asset path and optionally compares provider/self-hosted lanes after user approval; provider API keys must not block the core UI proof.",
       status: "supported",
       risk: "major",
-      sourceIds: ["instantmesh", "trellis", "hunyuan3d-21", "meshy-api", "tripo"],
+      sourceIds: ["instantmesh", "trellis", "hunyuan3d-21", "hy3d-bench", "p3d-bench"],
       proofArtifactIds: [],
     },
     {
@@ -495,7 +549,9 @@ export function make3dAgentResearchPack(args: {
     proofArtifacts,
     assumptions: [
       "Research backing is mandatory for major architecture and product claims.",
-      "Single-image/text-to-3D provider integration is v1; multi-photo reconstruction and humanoid motion tracking are stretch lanes.",
+      "First-party deterministic scaffold and self-hosted/open-model lanes are the core path; paid provider APIs are optional comparator/acceleration lanes.",
+      "Brush/source selection and shared-scene composition are required UI proof lanes for screenshot-reference workflows.",
+      "Voice transcript handoff can be proved in v1; laptop-camera animation remains a permission-gated stretch lane until tracking and rigging receipts exist.",
       "gstack is an inspirational review methodology source, not a runtime dependency unless explicitly installed.",
       "Fresh-user emulation is not a real human study; label it as emulation unless an actual participant performs the session.",
       "Reference media from movies, games, social posts, videos, or textbooks requires a source manifest and rights/provenance gate before export.",
@@ -503,7 +559,7 @@ export function make3dAgentResearchPack(args: {
       "Urgent or life-critical engineering requests accelerate triage and evidence collection; they do not permit exact replica export, unsafe human use, or skipped qualified review.",
       proofScope === "local-personal-research"
         ? "Local personal-research proof can pass without deployment/provider/comparator artifacts, but it must not claim judge/customer readiness."
-        : "Production proof requires deployment, provider/cost, comparator, recording, and engineering safety artifacts before customer or judge readiness claims.",
+        : "Production proof requires deployment, chosen-lane cost/comparator receipts, recording, and engineering safety artifacts before customer or judge readiness claims.",
     ],
   };
 }

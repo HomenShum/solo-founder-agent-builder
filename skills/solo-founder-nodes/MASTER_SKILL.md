@@ -146,10 +146,13 @@ must be labeled `unsupported_assumption` or `rejected`, never sold as shipped ca
 **3D founder scenario:** for picture/text/video/reference-media-to-3D requests, default to a
 first-party plan: reference-media intake + rights/provenance gate -> first-principles component
 breakdown -> capture/coverage -> multi-view reconstruction or local/open image/text-to-asset -> depth
-fallback -> assetize/export -> Three.js/WebGL viewer action protocol. Meshy/Tripo/Rodin/Luma are
+fallback -> brush/source crop when the user marks an object -> shared scene manifest -> assetize/export
+-> Three.js/WebGL viewer action protocol -> voice transcript handoff and permission-gated camera
+animation contract. Meshy/Tripo/Rodin/Luma are
 comparator or fallback lanes, not the product architecture unless the founder explicitly chooses
-provider-first. Exact extraction of protected movie/game/social/textbook assets without rights proof
-is blocked. Educational purpose is recorded as context, not treated as automatic permission. Allowed
+provider-first. GMI AgentBox is an optional deployment/listing lane for packaged agents, not a
+required 3D generation provider. Exact extraction of protected movie/game/social/textbook assets
+without rights proof is blocked. Educational purpose is recorded as context, not treated as automatic permission. Allowed
 modes are user-owned or licensed media, public-domain/compatible-license media, real-world factual
 object reference, or transformed inspiration with similarity/provenance receipts. Before generation,
 produce a component tree, functional geometry/material map, protected-expression filter, and

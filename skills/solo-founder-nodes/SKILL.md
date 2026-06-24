@@ -82,9 +82,11 @@ provider keys.
 
 **3D/fresh-user proof:** for screenshot-only picture/text/video/reference-media-to-3D requests, use
 `npm run sfn -- 3d plan ...` with first-party lanes, a rights/provenance gate, first-principles
-component breakdown, and providers as comparators/fallbacks. Prove the claim with `fresh-user`,
-`proof full-verify`, and `trust verify` receipts before saying a nontechnical founder or judge can use
-it end to end. Block unverified exact extraction of protected social/movie/game/textbook assets.
+component breakdown, brush/source crop receipt, shared scene manifest, voice transcript handoff,
+permission-gated camera-animation contract, and providers as comparators/fallbacks. GMI AgentBox is
+an optional deployment/listing lane, not a required 3D generation provider. Prove the claim with
+`fresh-user`, `proof full-verify`, and `trust verify` receipts before saying a nontechnical founder or
+judge can use it end to end. Block unverified exact extraction of protected social/movie/game/textbook assets.
 Educational purpose is context, not automatic permission. Support user-owned/licensed/public-domain
 media, real-world factual references, or transformed inspiration only after a component tree,
 functional geometry/material map, protected-expression filter, originality delta, and provenance

@@ -3,6 +3,7 @@ export type ThreeDProofState = (typeof threeDProofStates)[number];
 
 export const firstPartyThreeDLanes = [
   "reference-media-intake",
+  "brush-source-selection",
   "rights-provenance-gate",
   "first-principles-decomposition",
   "capture-intake",
@@ -12,8 +13,12 @@ export const firstPartyThreeDLanes = [
   "single-image-asset",
   "text-to-asset",
   "depth-fallback",
+  "scene-composition",
   "assetize-export",
   "viewer-action-protocol",
+  "voice-transcript-lane",
+  "camera-animation-contract",
+  "agentbox-deployment-lane",
 ] as const;
 export type FirstPartyThreeDLane = (typeof firstPartyThreeDLanes)[number];
 
@@ -65,6 +70,7 @@ export function makeThreeDPlan(input: {
     generatedAt: input.generatedAt ?? new Date().toISOString(),
     firstPartyLanes: [
       lane("reference-media-intake", "Accept screenshots, social/video links, textbook images, and movie/game references as reference media, not automatically as owned source assets.", ["U.S. Copyright Office AI reports", "platform terms", "source metadata"], ["source-manifest", "media-origin-receipt"]),
+      lane("brush-source-selection", "Let the user brush/select the target object before generation so the crop becomes the source target and surrounding media remains context.", ["Lovart-style touch edit workflows", "segmentation/matting UX", "source provenance"], ["brush-selection-mask", "source-crop-receipt", "background-context-note"]),
       lane("rights-provenance-gate", "Decide whether the requested output is user-owned/licensed, public-domain/CC-compatible, real-world factual reference, transformative inspiration, or blocked exact extraction.", ["fair-use four factors", "license receipts", "similarity review"], ["rights-provenance-receipt", "allowed-use-mode", "blocked-extraction-state"]),
       lane("first-principles-decomposition", "Break the reference down into functional parts, geometric primitives, materials, constraints, and original design deltas before generation.", ["P3D-Bench", "idea-expression distinction", "useful-article/functionality review"], ["component-breakdown", "functional-geometry-map", "originality-delta", "protectable-expression-filter", "educational-purpose-note"]),
       lane("capture-intake", "Accept text, one image, multi-view images, and video-frame references.", ["CO3D", "Objaverse"], ["input-manifest", "capture-coverage-receipt"]),
@@ -74,8 +80,12 @@ export function makeThreeDPlan(input: {
       lane("single-image-asset", "Generate a usable mesh asset from a single image.", ["InstantMesh", "Stable Fast 3D", "TRELLIS", "Hunyuan3D"], ["glb-or-usdz", "asset-validity-check"]),
       lane("text-to-asset", "Generate a mesh asset from text when no image exists.", ["DreamFusion", "Magic3D", "Shap-E", "TRELLIS"], ["prompt-alignment-score", "generated-asset"]),
       lane("depth-fallback", "Provide a navigable fallback when full reconstruction is blocked.", ["Depth Anything", "Video Depth Anything"], ["fallback-depth-map", "fallback-viewer-proof"]),
+      lane("scene-composition", "Place generated targets, props, characters, and camera rigs into one shared scene environment so the result is usable beyond a single isolated mesh.", ["Objaverse", "P3D-Bench", "WebGL scene graphs"], ["scene-manifest", "multi-asset-viewer-proof", "asset-role-map"]),
       lane("assetize-export", "Convert outputs into portable artifacts.", ["glTF", "USDZ", "OBJ", "STL"], ["exported-file", "reopen-proof", "hash"]),
       lane("viewer-action-protocol", "Let the chat agent act inside the viewer with typed actions.", ["ReAct", "Toolformer", "WebArena", "OSWorld"], ["action-schema", "playwright-trace", "viewer-state-receipt"]),
+      lane("voice-transcript-lane", "Capture voice or dictation as a transcript that enters the same chat/action loop as typed requests.", ["OSWorld", "WebArena", "chat transcription UX"], ["voice-transcript-receipt", "chat-handoff-proof"]),
+      lane("camera-animation-contract", "Treat laptop-camera animation as a permission-gated contract lane until webcam access, tracking, rigging, and safety receipts exist.", ["human pose/motion tracking literature", "browser permission model"], ["camera-permission-gate", "animation-contract-receipt", "unsupported-motion-label"]),
+      lane("agentbox-deployment-lane", "Represent GMI AgentBox as an optional deployment, marketplace, and live endpoint lane for packaged agents, not as a required 3D generation provider.", ["GMI AgentBox docs", "Docker deployment", "marketplace listing"], ["deployment-choice-receipt", "agentbox-listing-plan", "live-endpoint-proof-if-selected"]),
     ],
     providerPolicy: {
       defaultRole: "comparator_or_fallback_only",
@@ -92,7 +102,7 @@ export function makeThreeDPlan(input: {
       { id: "dtu-mvs", role: "Multi-view stereo geometry reference.", required: false },
     ],
     proofStates: [...threeDProofStates],
-    exportTargets: ["glb", "gltf", "usdz", "obj", "stl", "viewer-url", "blender-open-proof", "cad-stretch-label"],
+    exportTargets: ["glb", "gltf", "usdz", "obj", "stl", "viewer-url", "scene-manifest", "blender-open-proof", "cad-stretch-label"],
   };
 }
 
@@ -130,6 +140,18 @@ export function verifyThreeDPlan(plan: ThreeDPlan): ThreeDPlanVerdict {
   const decompositionLane = plan.firstPartyLanes.find((lane) => lane.id === "first-principles-decomposition");
   if (!decompositionLane?.proofRequired.includes("component-breakdown") || !decompositionLane?.proofRequired.includes("originality-delta")) {
     errors.push("3D plan must require first-principles component breakdown and originality delta before generation");
+  }
+  const brushLane = plan.firstPartyLanes.find((lane) => lane.id === "brush-source-selection");
+  if (!brushLane?.proofRequired.includes("source-crop-receipt")) {
+    errors.push("3D plan must require a brush/source crop receipt for screenshot-reference workflows");
+  }
+  const sceneLane = plan.firstPartyLanes.find((lane) => lane.id === "scene-composition");
+  if (!sceneLane?.proofRequired.includes("scene-manifest")) {
+    errors.push("3D plan must require a scene manifest for multi-asset environments");
+  }
+  const cameraLane = plan.firstPartyLanes.find((lane) => lane.id === "camera-animation-contract");
+  if (!cameraLane?.proofRequired.includes("camera-permission-gate")) {
+    errors.push("3D plan must treat webcam animation as a permission-gated contract lane");
   }
   if (plan.exportTargets.includes("cad-native-pass")) {
     warnings.push("CAD-native pass should remain a separate proof lane unless a CAD adapter is verified");

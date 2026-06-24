@@ -10,7 +10,7 @@ directive and run the substrate, which are the only two things the skill require
 >    (`discover -> benchmark -> setup -> build -> adapter -> verify -> iterate`) and the four non-negotiables
 >    (HELD-OUT / NO ANSWER-KEYS / IN-APP TRANSFER / HONEST PROVENANCE).
 > 2. In `skills/solo-founder-nodes/templates/`, run `npm i && npm run smoke` and paste the last line
->    (expect `98 passed, 0 failed` on the current substrate).
+>    (expect `135 passed, 0 failed` on the current substrate).
 > 3. Run `node skills/solo-founder-nodes/conformance/conformance.mjs --run-smoke` and paste the final
 >    `PASS ... receipt ...` line.
 > Report the receipt hash. If all three succeed, this agent is certified portable for the skill.

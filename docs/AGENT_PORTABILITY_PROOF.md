@@ -7,7 +7,7 @@ fresh-user 3D app build, live UI completion, production deployment, or customer-
 
 ## 2026-06-24 UTC OpenRouter Cheap-Model Run
 
-This run was captured on an older 74-test substrate. The current substrate reports `98 passed, 0
+This run was captured on an older 74-test substrate. The current substrate reports `135 passed, 0
 failed`; rerun the reproduce commands below before claiming OpenClaw or Hermes are verified against
 the latest gates.
 
