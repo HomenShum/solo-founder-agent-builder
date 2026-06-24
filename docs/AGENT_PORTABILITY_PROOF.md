@@ -21,12 +21,12 @@ Receipts:
 | Agent | Result | Receipt | Proof artifact | SHA-256 |
 |---|---:|---|---|---|
 | OpenRouter smoke | PASS | `openrouter-ok` | `D:\ai-agent-hosts\proof\openrouter-smoke.json` | `B8C77F0EE0747BB5F272D6D99D11D79D796A97D3C085E9C5C6D95FA03F92FE76` |
-| OpenClaw | PASS | `d35b461dfbefb25b` | `D:\ai-agent-hosts\proof\openclaw-conformance.txt` | `FB942806D958063280C80434C97590AD06C5116C6589925751376D957E16E13C` |
+| OpenClaw | PASS | `d35b461dfbefb25b` | `D:\ai-agent-hosts\proof\openclaw-conformance.txt` | `B8F7B832A75747DA4C4CC99EC6D0F1505F9FB8723BD90DB72FBF5D2B89612B70` |
 | Hermes | PASS | `d35b461dfbefb25b` | `D:\ai-agent-hosts\proof\hermes-conformance.txt` | `F54722F1798CDE2A548B9C2DBECFA8493576411F083B60152A94EAEE782E07AC` |
 
 Observed outputs:
 
-- OpenClaw returned: `PASS · 16/16 · receipt d35b461dfbefb25b`; substrate smoke `64 passed, 0 failed`.
+- OpenClaw returned: `PASS · 16/16 · receipt d35b461dfbefb25b`; resolved workspace `D:\ai-agent-hosts\openclaw-workspace`.
 - Hermes returned: `PASS · 16/16 · receipt d35b461dfbefb25b`; substrate smoke `64 passed, 0 failed`.
 
 Important caveats:
