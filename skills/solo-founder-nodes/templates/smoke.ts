@@ -99,6 +99,10 @@ import {
   partResearchRalphStages,
   verifyThreeDPartResearchRalphReceipt,
 } from "./threeD/partResearchRalph";
+import {
+  makeLocalThreeDModelRalphReceipt,
+  verifyLocalThreeDModelRalphReceipt,
+} from "./threeD/localModelRalph";
 import { makeResearchOnlyAsset, verifyResearchAssetManifest } from "./threeD/researchAssetMaker";
 import { makeEngineeringInventionHarness, verifyEngineeringInventionHarness } from "./engineering/engineeringInventionHarness";
 import { makeFirstPrinciplesDeconstructionReceipt, verifyFirstPrinciplesDeconstructionReceipt } from "./engineering/firstPrinciplesDeconstructionReceipt";
@@ -1288,6 +1292,69 @@ async function main() {
   missingInterfaceReceipt.partLoops[0].compositionInterfaces = [];
   const missingInterfaceVerdict = verifyThreeDPartResearchRalphReceipt(missingInterfaceReceipt, { baseDir: proofRoot });
   check("part-research RALPH rejects missing part composition interface", missingInterfaceVerdict.ok === false && missingInterfaceVerdict.errors.some((e) => e.includes("composition interface")));
+
+  console.log("\nLocal3DModelRalph (TRELLIS / Hunyuan3D-2.0 model lane proof):");
+  const hunyuanBlocked = makeLocalThreeDModelRalphReceipt({
+    goal: "Run Hunyuan3D-2.0 shape generation after brush crop and part proof.",
+    modelId: "hunyuan3d-2.0",
+    status: "blocked_compute",
+    generatedAt: "2026-06-24T00:00:00.000Z",
+    runtime: {
+      os: "win32",
+      nvidiaSmi: { found: true, gpuName: "NVIDIA GeForce RTX 4070 Laptop GPU", vramGb: 8 },
+      torch: { found: true, version: "2.3.1+cpu", cudaAvailable: false },
+      hfToken: { envName: "HF_TOKEN", present: true, tokenValueRecorded: false },
+    },
+  });
+  const hunyuanBlockedVerdict = verifyLocalThreeDModelRalphReceipt(hunyuanBlocked, { baseDir: proofRoot, requireFiles: false });
+  check(
+    "Hunyuan3D-2.0 model lane passes as truthful blocked-compute receipt",
+    hunyuanBlockedVerdict.ok
+      && hunyuanBlocked.verdict.canClaimModelGeneratedAsset === false
+      && hunyuanBlocked.setupContract.secretEnvVars.includes("HF_TOKEN")
+      && hunyuanBlocked.backend.huggingFaceModels.includes("tencent/Hunyuan3D-2"),
+    hunyuanBlockedVerdict.errors.join("; "),
+  );
+  const trellisBlocked = makeLocalThreeDModelRalphReceipt({
+    goal: "Run TRELLIS image-to-3D after source-isolation and component proof.",
+    modelId: "trellis",
+    status: "blocked_compute",
+    generatedAt: "2026-06-24T00:00:00.000Z",
+    runtime: {
+      os: "win32",
+      nvidiaSmi: { found: true, gpuName: "NVIDIA GeForce RTX 4070 Laptop GPU", vramGb: 8 },
+      torch: { found: true, version: "2.3.1+cpu", cudaAvailable: false },
+      hfToken: { envName: "HF_TOKEN", present: true, tokenValueRecorded: false },
+    },
+  });
+  const trellisBlockedVerdict = verifyLocalThreeDModelRalphReceipt(trellisBlocked, { baseDir: proofRoot, requireFiles: false });
+  check(
+    "TRELLIS model lane records Linux/16GB runtime requirement and blocks model claim",
+    trellisBlockedVerdict.ok
+      && trellisBlocked.backend.minimumRuntime.os.includes("Linux")
+      && trellisBlocked.backend.minimumRuntime.vramGb >= 16
+      && trellisBlocked.verdict.blockedClaims.some((claim) => claim.includes("TRELLIS-generated")),
+    trellisBlockedVerdict.errors.join("; "),
+  );
+  const fakeModelPass = makeLocalThreeDModelRalphReceipt({
+    goal: "Fake model pass without generated artifact.",
+    modelId: "hunyuan3d-2.0",
+    status: "pass",
+    generatedAt: "2026-06-24T00:00:00.000Z",
+    runtime: {
+      os: "linux",
+      nvidiaSmi: { found: true, gpuName: "A100", vramGb: 40 },
+      torch: { found: true, version: "2.4.0+cu118", cudaAvailable: true },
+      hfToken: { envName: "HF_TOKEN", present: true, tokenValueRecorded: false },
+    },
+  });
+  const fakeModelPassVerdict = verifyLocalThreeDModelRalphReceipt(fakeModelPass, { baseDir: proofRoot, requireFiles: false, requirePass: true });
+  check(
+    "local model RALPH rejects pass without output/reopen/viewer proof",
+    fakeModelPassVerdict.ok === false
+      && fakeModelPassVerdict.missingProofs.some((proof) => proof.includes("outputAssetPath"))
+      && fakeModelPass.verdict.canClaimModelGeneratedAsset === false,
+  );
 
   console.log("\nThreeDAssetQualityGate (industry-grade asset bar):");
   const assetQualityPlan = makeThreeDAssetQualityPlan({

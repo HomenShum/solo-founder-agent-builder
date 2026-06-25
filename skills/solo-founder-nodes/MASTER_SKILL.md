@@ -320,6 +320,16 @@ personal-research-only, not production-ready, not human-use approved, and not an
 Commercial/deployment use is a user-owned external decision after their due diligence; the agent must
 not claim to approve it.
 
+**Local 3D model RALPH:** if the loop claims Hunyuan3D-2.0, TRELLIS, or another self-hosted model
+generated an asset, run `npm run sfn -- 3d model-plan --goal "<goal>" --model
+<hunyuan3d-2.0|trellis> --out <receipt.json>` before setup/build and
+`npm run sfn -- 3d model-verify --receipt <receipt.json>` during verify. A blocked preflight is still
+valid evidence for setup honesty, but it cannot support a model-generated asset claim. `--require-pass`
+is legal only when the receipt includes the generated asset, runtime log, mesh validation, DCC/viewer
+reopen proof, and actual UI screenshot. Record only the `HF_TOKEN` env contract and presence boolean;
+never record token values. Doctrine: [`references/local-3d-model-ralph.md`](references/local-3d-model-ralph.md);
+copyable implementation: [`templates/threeD/localModelRalph.ts`](templates/threeD/localModelRalph.ts).
+
 **3D asset quality gate:** coherent/prototype/industry-grade asset claims require more than a visible
 OBJ. Before building, run `npm run sfn -- 3d quality-plan --goal "<goal>" --target
 <viewer|game|cad|character|scene|marketplace> --industry-grade` when the target claim is industry

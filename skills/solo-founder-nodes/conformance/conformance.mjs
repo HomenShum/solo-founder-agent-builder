@@ -33,7 +33,7 @@ ok("4 non-negotiables present", nn.every((n) => M.includes(n)), nn.filter((n) =>
 const nodes = ["1-discover", "2-benchmark", "3-setup", "4-build", "5-adapter", "6-verify", "7-iterate"];
 ok("7 node playbooks present", nodes.every((n) => existsSync(join(skill, "nodes", `${n}.md`))));
 ok("phase order is verify then iterate", /adapter\s*\|\s*wire[\s\S]*\|\s*6\s*\|\s*verify[\s\S]*\|\s*7\s*\|\s*iterate/i.test(master));
-const refs = ["honest-lane", "memory", "context-substrate", "control-plane", "cli-command-center", "host-hooks-fresh-judge", "design-bridge", "agent-chat-ux", "gstack-bridge", "benchmarks", "research", "research-spine", "research-governor", "architecture-governor", "direction-change", "intent-ralph", "idea-tweaks", "component-ralph", "assembly-coherence", "domain-packs", "domain-ralph", "acceptance-compiler", "operation-ralph", "prometheus-mode", "industry-3d-assets", "part-research-ralph"];
+const refs = ["honest-lane", "memory", "context-substrate", "control-plane", "cli-command-center", "host-hooks-fresh-judge", "design-bridge", "agent-chat-ux", "gstack-bridge", "benchmarks", "research", "research-spine", "research-governor", "architecture-governor", "direction-change", "intent-ralph", "idea-tweaks", "component-ralph", "assembly-coherence", "domain-packs", "domain-ralph", "acceptance-compiler", "operation-ralph", "prometheus-mode", "industry-3d-assets", "part-research-ralph", "local-3d-model-ralph"];
 ok("references present", refs.every((r) => existsSync(join(skill, "references", `${r}.md`))));
 ok("domain pack catalog present", ["3d-assets", "construction-mockups", "manufacturing-parts", "onboarding-docs", "avatar-vtuber", "film-vfx", "game-assets", "finance-nodeagent", "video-remix", "image-editing"].every((d) => existsSync(join(skill, "domains", d, "invariants.md"))));
 
@@ -75,6 +75,7 @@ ok("templates substrate present", [
   "threeD/threeDLoop.ts",
   "threeD/assetQualityGate.ts",
   "threeD/partResearchRalph.ts",
+  "threeD/localModelRalph.ts",
   "threeD/researchAssetMaker.ts",
   "engineering/engineeringInventionHarness.ts",
   "engineering/firstPrinciplesDeconstructionReceipt.ts",
@@ -122,6 +123,7 @@ ok("Prometheus Mode directive present", /Prometheus Mode/i.test(master) && /prom
 ok("3D/fresh-user/trust proof directives present", /3D founder scenario/i.test(master) && /fresh-user/i.test(master) && /trust verify/i.test(master));
 ok("industry-grade 3D asset quality gate directive present", /3D asset quality gate/i.test(master) && /3d quality-plan/i.test(master) && /assetQualityGate/i.test(master));
 ok("3D part-research RALPH directive present", /part-research RALPH/i.test(master) && /3d part-research-plan/i.test(master) && /partResearchRalph/i.test(master));
+ok("local 3D model RALPH directive present", /Local 3D model RALPH/i.test(master) && /3d model-plan/i.test(master) && /Hunyuan3D-2\.0/i.test(master) && /TRELLIS/i.test(master));
 ok("engineering invention harness directive present", /Engineering invention harness/i.test(master) && /engineering plan/i.test(master) && /non-exportable study sandbox/i.test(master));
 
 // 5. Portability declared (no single-agent lock-in): the directive names multiple agents / "any coding agent".

@@ -226,6 +226,15 @@ import {
   type ThreeDPartResearchRalphReceipt,
 } from "../threeD/partResearchRalph";
 import {
+  localThreeDModelIds,
+  makeLocalThreeDModelRalphReceipt,
+  readLocalThreeDModelRalphReceipt,
+  verifyLocalThreeDModelRalphReceipt,
+  type LocalThreeDModelId,
+  type LocalThreeDModelRalphReceipt,
+  type LocalThreeDModelStatus,
+} from "../threeD/localModelRalph";
+import {
   makeResearchOnlyAsset,
   verifyResearchAssetManifest,
   type ResearchAssetManifest,
@@ -518,6 +527,18 @@ function parseThreeDAssetClaimLevel(args: string[]): ThreeDAssetClaimLevel {
   throw new Error(`unsupported 3D asset claim level '${raw ?? ""}' (expected one of: ${threeDAssetClaimLevels.join(", ")})`);
 }
 
+function parseLocalThreeDModelId(value?: string): LocalThreeDModelId | undefined {
+  if (!value) return undefined;
+  if (localThreeDModelIds.includes(value as LocalThreeDModelId)) return value as LocalThreeDModelId;
+  throw new Error(`unsupported local 3D model '${value}' (expected one of: ${localThreeDModelIds.join(", ")})`);
+}
+
+function parseLocalThreeDModelStatus(value: string): LocalThreeDModelStatus {
+  const allowed: LocalThreeDModelStatus[] = ["planned", "blocked_compute", "blocked_secret", "ready_to_run", "pass", "failed_with_receipt"];
+  if (allowed.includes(value as LocalThreeDModelStatus)) return value as LocalThreeDModelStatus;
+  throw new Error(`unsupported local 3D model status '${value}' (expected one of: ${allowed.join(", ")})`);
+}
+
 function parseGstackRisk(value?: string): GstackRiskLevel {
   if (value && gstackRiskLevels.includes(value as GstackRiskLevel)) return value as GstackRiskLevel;
   throw new Error(`unsupported gstack risk '${value ?? ""}' (expected one of: ${gstackRiskLevels.join(", ")})`);
@@ -659,6 +680,8 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   3d part-research-verify --receipt <file> [--base <dir>] [--no-files]  3D shortcut over the generic intent RALPH idea
   3d quality-plan --goal <g> [--target viewer|game|cad|character|scene|marketplace] [--claim personal-research-scaffold|prototype|industry-grade] [--industry-grade] [--out <file>]
   3d quality-verify --receipt <file> [--base <dir>]
+  3d model-plan --goal <g> --model hunyuan3d-2.0|trellis [--status planned|blocked_compute|blocked_secret|ready_to_run|pass|failed_with_receipt] [--out <file>]
+  3d model-verify --receipt <file> [--base <dir>] [--no-files] [--require-pass]
   3d make-asset --goal <g> --project-id <id> --out-dir <dir> [--functional-spec <file>] [--deconstruction-receipt <file>]
   3d verify-asset --manifest <file> [--base <dir>]
   engineering plan --goal <g> [--risk low|material_damage|safety_critical|medical_or_life_support] [--urgency routine|urgent|emergency] [--out <file>]
@@ -2390,6 +2413,47 @@ async function main() {
         console.log(JSON.stringify({ receipt: abs, verdict }, jbig, 2));
         process.exit(verdict.ok ? 0 : 1);
       }
+      if (sub === "model-plan" || sub === "local-model-plan") {
+        const goal = flag(rest, "--goal");
+        const model = parseLocalThreeDModelId(flag(rest, "--model"));
+        if (!goal || !model) {
+          console.error(`3d model-plan --goal <g> --model ${localThreeDModelIds.join("|")} [--status planned|blocked_compute|blocked_secret|ready_to_run|pass|failed_with_receipt] [--out <file>]`);
+          process.exit(2);
+        }
+        const receipt = makeLocalThreeDModelRalphReceipt({
+          goal,
+          modelId: model,
+          status: parseLocalThreeDModelStatus(flag(rest, "--status", "planned")!),
+          runtime: {
+            os: process.platform,
+            hfToken: {
+              envName: "HF_TOKEN",
+              present: Boolean(process.env.HF_TOKEN),
+              tokenValueRecorded: false,
+            },
+          },
+        });
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), receipt);
+        console.log(JSON.stringify(out ? { out: resolve(out), receipt } : receipt, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "model-verify" || sub === "local-model-verify") {
+        const receiptPath = flag(rest, "--receipt");
+        if (!receiptPath) {
+          console.error("3d model-verify --receipt <file> [--base <dir>] [--no-files] [--require-pass]");
+          process.exit(2);
+        }
+        const abs = resolve(receiptPath);
+        const receipt = readLocalThreeDModelRalphReceipt(abs) ?? readJson<LocalThreeDModelRalphReceipt>(abs);
+        const verdict = verifyLocalThreeDModelRalphReceipt(receipt, {
+          baseDir: flag(rest, "--base") ? resolve(flag(rest, "--base")!) : dirname(abs),
+          requireFiles: !rest.includes("--no-files"),
+          requirePass: rest.includes("--require-pass"),
+        });
+        console.log(JSON.stringify({ receipt: abs, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
       if (sub === "make-asset" || sub === "asset-make") {
         const goal = flag(rest, "--goal");
         const projectId = flag(rest, "--project-id");
@@ -2433,7 +2497,7 @@ async function main() {
         console.log(JSON.stringify({ manifest: abs, verdict }, jbig, 2));
         process.exit(verdict.ok ? 0 : 1);
       }
-      console.error("3d: init|plan --goal <g> [--out <file>] | verify --file <file> | compare [--out <file>] | part-research-plan --goal <g> [--components <file>] [--completed] [--out <file>] | part-research-verify --receipt <file> [--base <dir>] [--no-files] | quality-plan --goal <g> [--target <target>] [--claim <level>] [--out <file>] | quality-verify --receipt <file> [--base <dir>] | make-asset --goal <g> --project-id <id> --out-dir <dir> [--functional-spec <file>] [--deconstruction-receipt <file>] | verify-asset --manifest <file> [--base <dir>]");
+      console.error("3d: init|plan --goal <g> [--out <file>] | verify --file <file> | compare [--out <file>] | part-research-plan --goal <g> [--components <file>] [--completed] [--out <file>] | part-research-verify --receipt <file> [--base <dir>] [--no-files] | quality-plan --goal <g> [--target <target>] [--claim <level>] [--out <file>] | quality-verify --receipt <file> [--base <dir>] | model-plan --goal <g> --model <id> [--out <file>] | model-verify --receipt <file> [--base <dir>] | make-asset --goal <g> --project-id <id> --out-dir <dir> [--functional-spec <file>] [--deconstruction-receipt <file>] | verify-asset --manifest <file> [--base <dir>]");
       process.exit(2);
     }
     case "engineering": {

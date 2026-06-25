@@ -29,6 +29,9 @@ Research anchors:
   representation and still keep geometry/appearance information aligned.
 - [DreamGaussian](https://arxiv.org/abs/2309.16653) shows why a first-party pipeline should convert
   generated 3D Gaussians into textured meshes and refine textures in UV space before downstream use.
+- [Hunyuan3D 2.0](https://github.com/Tencent-Hunyuan/Hunyuan3D-2) is the local/self-hosted model lane
+  for image and multi-image to mesh proofs. The loop must record runtime, model output, mesh
+  validation, and reopen evidence before claiming Hunyuan-generated assets.
 - [Hunyuan3D 2.1](https://arxiv.org/html/2506.15442v1) and its public
   [Hunyuan3D-Paint 2.1 notes](https://huggingface.co/spaces/tencent/Hunyuan3D-2.1/blob/main/hy3dpaint/README.md)
   reinforce a two-stage asset bar: shape generation plus mesh-conditioned PBR texture generation
@@ -51,15 +54,19 @@ Pipeline implication:
    texturing.
 3. Convert/refine: mesh extraction, cleanup/retopo, UV unwrap, PBR material maps, and texture
    consistency checks.
-4. Prove utility: GLB/glTF export, Blender/DCC reopen, Three.js viewer proof, wireframe/UV/PBR
+4. Prove model execution when applicable: run the local model RALPH receipt for Hunyuan3D-2.0/TRELLIS
+   and fail closed if runtime or output proof is missing.
+5. Prove utility: GLB/glTF export, Blender/DCC reopen, Three.js viewer proof, wireframe/UV/PBR
    screenshots, and target-specific LOD/collision/pivot/rig receipts.
-5. Score held-out: compare against first-party baseline and external providers on semantic alignment,
+6. Score held-out: compare against first-party baseline and external providers on semantic alignment,
    mesh validity, topology, editability, texture/PBR quality, latency, cost, and UI completion.
 
 Executable gate:
 
 ```bash
 npm run sfn -- 3d quality-plan --goal "<goal>" --target game --industry-grade --out asset-quality-plan.json
+npm run sfn -- 3d model-plan --goal "<goal>" --model hunyuan3d-2.0 --out local-model-hunyuan.json
+npm run sfn -- 3d model-verify --receipt local-model-hunyuan.json --no-files
 npm run sfn -- 3d quality-verify --receipt asset-quality-receipt.json --base .
 ```
 
@@ -70,5 +77,7 @@ Fail-closed rules:
 - A visually plausible mesh cannot pass `industry-grade` without topology, UV, PBR, reopen, and
   scorecard evidence.
 - A game/CAD/customer/marketplace claim cannot pass if the output only proves a research scaffold.
+- Hunyuan3D-2.0/TRELLIS output cannot be claimed if the local model RALPH lane is planned, blocked, or
+  missing runtime/output/reopen proof.
 - Exact replica export and source-derived protected mesh/texture remain blocked unless rights,
   provenance, and user-owned approval are explicitly proven outside the agent.

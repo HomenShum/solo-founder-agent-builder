@@ -185,6 +185,15 @@ For coherent or industry-grade asset claims, additionally run
 `npm run sfn -- 3d quality-verify --receipt <asset-quality-receipt.json>` during verify. OBJ-only,
 random primitive, no-UV, no-PBR, no-topology, or no-reopen evidence cannot pass a prototype or
 industry-grade claim. Doctrine: [`references/industry-3d-assets.md`](references/industry-3d-assets.md).
+If the build claims Hunyuan3D-2.0, TRELLIS, or another self-hosted model generated an asset, add the
+local model lane with `npm run sfn -- 3d model-plan --goal "<goal>" --model
+<hunyuan3d-2.0|trellis> --out <receipt.json>` and verify it with
+`npm run sfn -- 3d model-verify --receipt <receipt.json>`. `--require-pass` is only valid after the
+receipt has generated asset, runtime log, mesh validation, DCC/viewer reopen proof, and real UI
+screenshot evidence. Block model-generated claims when the lane is only planned or blocked. Record
+`HF_TOKEN` as the env contract only; never record token values. Doctrine:
+[`references/local-3d-model-ralph.md`](references/local-3d-model-ralph.md); implementation:
+[`templates/threeD/localModelRalph.ts`](templates/threeD/localModelRalph.ts).
 
 **Engineering invention harness:** for urgent, safety-critical, medical, life-support, field-repair, or
 "life and death" engineering requests, use
