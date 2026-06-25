@@ -1,0 +1,1 @@
+export { comparePrometheusVersions } from "./prometheusMode";

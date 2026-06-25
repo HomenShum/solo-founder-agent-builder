@@ -149,6 +149,19 @@ import {
 } from "../component-ralph/componentRalphRunner";
 import { judgeComponentLayer } from "../component-ralph/componentJudge";
 import {
+  appendPrometheusVersion,
+  comparePrometheusVersions,
+  inferPrometheusTarget,
+  makePrometheusRun,
+  prometheusTargets,
+  readPrometheusRun,
+  verifyPrometheusRun,
+  writePrometheusReplay,
+  writePrometheusRun,
+  type PrometheusRun,
+  type PrometheusTarget,
+} from "../prometheus/prometheusMode";
+import {
   assertLoopPhase,
   assertPhaseRalphStage,
   completePhaseRalphReceipt,
@@ -422,6 +435,12 @@ function parseComponentStageStatus(value?: string): ComponentRalphStageStatus {
   throw new Error(`unsupported component RALPH status '${status}' (expected one of: ${allowed.join(", ")})`);
 }
 
+function parsePrometheusTarget(value: string | undefined, goal = ""): PrometheusTarget {
+  if (!value) return inferPrometheusTarget(goal);
+  if (prometheusTargets.includes(value as PrometheusTarget)) return value as PrometheusTarget;
+  throw new Error(`unsupported Prometheus target '${value}' (expected one of: ${prometheusTargets.join(", ")})`);
+}
+
 function parseThreeDAssetTarget(value?: string): ThreeDAssetTarget {
   const normalized = value ?? "viewer";
   if (threeDAssetTargets.includes(normalized as ThreeDAssetTarget)) return normalized as ThreeDAssetTarget;
@@ -547,6 +566,11 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   component run --id <component-id> --phase <R|A|L|P|H> [--receipt <path>] [--status planned|running|completed|blocked] [--project <path>] [--ledger <file>]
   component judge [--id <component-id>] [--project <path>] [--ledger <file>] [--goal <g>] [--no-files]
   component proof --all [--project <path>] [--ledger <file>] [--goal <g>] [--no-files]
+  prometheus init --goal <g> [--target <domain>] [--iterations <n>] [--project <path>] [--run-id <id>]
+  prometheus run --goal <g> [--target <domain>] [--iterations <n>] [--project <path>] [--record]
+  prometheus status [--project <path>] [--run <id>]
+  prometheus compare [--project <path>] [--run <id>] [--out <file>]
+  prometheus replay|publish [--project <path>] [--run <id>] [--out <file>]
   3d init|plan --goal <g> [--out <file>]
   3d verify --file <file>
   3d compare [--out <file>]
@@ -1748,6 +1772,88 @@ async function main() {
         process.exit(verdict.ok ? 0 : 1);
       }
       console.error("component: init | decompose | status | run | judge | proof");
+      process.exit(2);
+    }
+    case "prometheus": {
+      const sub = rest[0];
+      const projectPath = resolve(flag(rest, "--project", ".")!);
+      const runId = flag(rest, "--run") ?? flag(rest, "--run-id");
+      if (sub === "init") {
+        const goal = flag(rest, "--goal");
+        if (!goal) {
+          console.error("prometheus init --goal <g> [--target <domain>] [--iterations <n>] [--project <path>] [--run-id <id>]");
+          process.exit(2);
+        }
+        const run = makePrometheusRun({
+          goal,
+          target: parsePrometheusTarget(flag(rest, "--target"), goal),
+          maxVersions: Number(flag(rest, "--iterations", "5")),
+          runId: flag(rest, "--run-id"),
+        });
+        const out = writePrometheusRun(projectPath, run);
+        console.log(JSON.stringify({ out, run, verdict: verifyPrometheusRun(run) }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "run") {
+        const existing = readPrometheusRun(projectPath, runId);
+        const goal = flag(rest, "--goal", existing?.goal);
+        if (!goal) {
+          console.error("prometheus run --goal <g> [--target <domain>] [--iterations <n>] [--project <path>] [--record]");
+          process.exit(2);
+        }
+        let run: PrometheusRun = existing ?? makePrometheusRun({
+          goal,
+          target: parsePrometheusTarget(flag(rest, "--target"), goal),
+          maxVersions: Number(flag(rest, "--iterations", "5")),
+          runId: flag(rest, "--run-id"),
+        });
+        const iterations = Math.max(1, Math.min(Number(flag(rest, "--iterations", "1")), run.maxVersions));
+        for (let index = 0; index < iterations && run.status === "running"; index++) {
+          run = appendPrometheusVersion({
+            run,
+            screenshot: rest.includes("--record") ? `versions/v${run.versions.length}/screenshot.png` : undefined,
+            video: rest.includes("--record") ? `versions/v${run.versions.length}/video.webm` : undefined,
+          });
+        }
+        const out = writePrometheusRun(projectPath, run);
+        const replay = writePrometheusReplay(projectPath, run);
+        const verdict = verifyPrometheusRun(run);
+        console.log(JSON.stringify({ out, replay, verdict, comparison: comparePrometheusVersions(run) }, jbig, 2));
+        process.exit(verdict.errors.length === 0 ? 0 : 1);
+      }
+      if (sub === "status") {
+        const run = readPrometheusRun(projectPath, runId);
+        if (!run) {
+          console.error("No Prometheus run found. Use: prometheus init --goal <g>");
+          process.exit(1);
+        }
+        const verdict = verifyPrometheusRun(run);
+        console.log(JSON.stringify({ runId: run.runId, status: run.status, target: run.target, verdict, versions: run.versions.length }, jbig, 2));
+        process.exit(verdict.errors.length === 0 ? 0 : 1);
+      }
+      if (sub === "compare") {
+        const run = readPrometheusRun(projectPath, runId);
+        if (!run) {
+          console.error("No Prometheus run found. Use: prometheus init --goal <g>");
+          process.exit(1);
+        }
+        const comparison = comparePrometheusVersions(run);
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), comparison);
+        console.log(JSON.stringify(out ? { out: resolve(out), comparison } : comparison, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "replay" || sub === "publish") {
+        const run = readPrometheusRun(projectPath, runId);
+        if (!run) {
+          console.error("No Prometheus run found. Use: prometheus init --goal <g>");
+          process.exit(1);
+        }
+        const out = writePrometheusReplay(projectPath, run, flag(rest, "--out"));
+        console.log(JSON.stringify({ out, runId: run.runId, comparison: comparePrometheusVersions(run) }, jbig, 2));
+        process.exit(0);
+      }
+      console.error("prometheus: init | run | status | compare | replay | publish");
       process.exit(2);
     }
     case "compare": {

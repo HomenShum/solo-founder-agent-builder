@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solo-founder.local/schemas/prometheus-version-scorecard.schema.json",
+  "title": "Prometheus Version Proof",
+  "type": "object",
+  "required": ["exportedFiles", "scorecard", "verdict"],
+  "properties": {
+    "screenshot": { "type": "string" },
+    "video": { "type": "string" },
+    "exportedFiles": { "type": "array", "items": { "type": "string" } },
+    "scorecard": { "type": "string" },
+    "verdict": { "enum": ["pass", "needs_iteration", "fail", "blocked"] }
+  }
+}

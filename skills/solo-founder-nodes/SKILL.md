@@ -104,6 +104,15 @@ do decompose parts that affect user value, exported artifacts, external standard
 risk. Spec: [`references/component-ralph.md`](references/component-ralph.md); implementation:
 [`templates/component-ralph/`](templates/component-ralph/). Doctrine: no component proof, no parent claim.
 
+**Prometheus Mode:** when the user wants the agent to keep improving a product over attempts, run
+`npm run sfn -- prometheus init --goal "<goal>" --target <domain> --project .`, then
+`npm run sfn -- prometheus run --goal "<goal>" --iterations <n> --record --project .`, then
+`npm run sfn -- prometheus compare|publish --project .`. Every version needs hypothesis, changes,
+component gates, proof references, score, failure analysis, and a next-version plan. This means
+artifact/harness improvement through receipts, not model self-training. Spec:
+[`references/prometheus-mode.md`](references/prometheus-mode.md); implementation:
+[`templates/prometheus/`](templates/prometheus/).
+
 **Research spine:** at `discover`, create or refresh `research-spine.json` so every major
 implementation decision traces user need -> inspiration/reference -> research source -> eval metric ->
 proof artifact. From `build` onward, block uncited decisions; from `verify` onward, block supported

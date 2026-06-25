@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solo-founder.local/schemas/prometheus-version.schema.json",
+  "title": "Prometheus Version",
+  "type": "object",
+  "required": ["versionId", "goal", "hypothesis", "changes", "componentGates", "proof", "metrics", "failureAnalysis", "next"],
+  "properties": {
+    "versionId": { "type": "string" },
+    "parentVersionId": { "type": "string" },
+    "goal": { "type": "string" },
+    "hypothesis": { "type": "string" },
+    "changes": { "type": "array", "items": { "type": "string" } },
+    "componentGates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "required", "status", "evidence"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "required": { "type": "boolean" },
+          "status": { "enum": ["pass", "partial", "fail", "blocked", "planned"] },
+          "evidence": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "proof": { "$ref": "version-scorecard.schema.json" },
+    "metrics": {
+      "type": "object",
+      "required": ["score", "costUsd", "runtimeMs", "modelCalls", "toolCalls"],
+      "properties": {
+        "score": { "type": "number", "minimum": 0, "maximum": 10 },
+        "costUsd": { "type": "number", "minimum": 0 },
+        "runtimeMs": { "type": "number", "minimum": 0 },
+        "modelCalls": { "type": "integer", "minimum": 0 },
+        "toolCalls": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "failureAnalysis": { "type": "array", "items": { "type": "string" } },
+    "next": { "type": "array", "items": { "type": "string" } }
+  }
+}

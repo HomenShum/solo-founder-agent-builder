@@ -62,6 +62,15 @@ import {
   verifyComponentRalphLedger,
 } from "./component-ralph/componentRalphRunner";
 import { judgeComponentLayer } from "./component-ralph/componentJudge";
+import {
+  appendPrometheusVersion,
+  comparePrometheusVersions,
+  makePrometheusRun,
+  prometheusTargets,
+  renderPrometheusReplayHtml,
+  verifyPrometheusRun,
+  writePrometheusRun,
+} from "./prometheus/prometheusMode";
 import { makeThreeDComparatorRubric, makeThreeDPlan, verifyThreeDPlan } from "./threeD/threeDLoop";
 import { makeThreeDAssetQualityPlan, verifyThreeDAssetQualityReceipt, type ThreeDAssetQualityReceipt } from "./threeD/assetQualityGate";
 import {
@@ -974,6 +983,100 @@ async function main() {
   check("component RALPH rejects incomplete required proof gates", missingGateVerdict.ok === false && missingGateVerdict.missingProofs.some((proof) => proof.includes("proofGate")));
   const noLedgerJudge = judgeComponentLayer({ projectPath: proofRoot, goal: "prove a coherent 3D asset pipeline" });
   check("component judge blocks missing ledger for compositional parent proof", noLedgerJudge.ok === false && noLedgerJudge.missingProofs.includes(".solo/ledgers/component-ralph.json"));
+
+  console.log("\nPrometheusMode (versioned engineering loop over artifact attempts):");
+  check("prometheus targets cover non-3D domains", prometheusTargets.includes("finance-workflow") && prometheusTargets.includes("agent-app"));
+  let prometheusRun = makePrometheusRun({
+    goal: "interactive 3D eyewear product page",
+    target: "3d-web-asset",
+    maxVersions: 3,
+    runId: "prom-smoke",
+    createdAt: "2026-06-24T00:00:00.000Z",
+  });
+  const emptyPrometheusVerdict = verifyPrometheusRun(prometheusRun);
+  check("prometheus run rejects no-version claim", emptyPrometheusVerdict.ok === false && emptyPrometheusVerdict.missingProofs.includes("prometheus:at-least-one-version"));
+  prometheusRun = appendPrometheusVersion({
+    run: prometheusRun,
+    gateStatuses: {
+      "direction.receipt": "pass",
+      "research.brief": "pass",
+      "proof.live-ui": "pass",
+      "asset.part-graph": "pass",
+      "asset.export-reopen": "partial",
+      "asset.r3f-viewer": "pass",
+      "asset.performance": "blocked",
+    },
+  });
+  const openPrometheusVerdict = verifyPrometheusRun(prometheusRun);
+  check("prometheus open version records improvement plan", openPrometheusVerdict.ok === false && prometheusRun.improvementPlans.length === 1);
+  prometheusRun = appendPrometheusVersion({
+    run: prometheusRun,
+    gateStatuses: {
+      "direction.receipt": "pass",
+      "research.brief": "pass",
+      "proof.live-ui": "pass",
+      "asset.part-graph": "pass",
+      "asset.export-reopen": "pass",
+      "asset.r3f-viewer": "pass",
+      "asset.performance": "pass",
+    },
+  });
+  const closedPrometheusVerdict = verifyPrometheusRun(prometheusRun);
+  const prometheusComparison = comparePrometheusVersions(prometheusRun);
+  const prometheusReplay = renderPrometheusReplayHtml(prometheusRun);
+  check("prometheus run passes after versioned gates close", closedPrometheusVerdict.ok && prometheusRun.status === "completed");
+  check("prometheus comparison tracks improvement delta", prometheusComparison.improvementDelta > 0 && prometheusComparison.bestVersionId === "v1");
+  check("prometheus replay renders version lineage", prometheusReplay.includes("Prometheus Mode") && prometheusReplay.includes("v0") && prometheusReplay.includes("v1"));
+
+  const openPrometheusRoot = mkdtempSync(join(tmpdir(), `solo-prometheus-open-${process.pid}-`));
+  const openLoop = createRalphLedger({ repoPath: openPrometheusRoot, goal: "interactive 3D eyewear product page", now: "2026-06-24T00:00:00.000Z" });
+  const openReceipt = (relative: string, body = "ok") => {
+    const abs = join(openLoop.paths.soloDir, relative);
+    mkdirSync(dirname(abs), { recursive: true });
+    writeFileSync(abs, body, "utf8");
+    return abs;
+  };
+  completeRalphMilestone(openPrometheusRoot, "R", [
+    openReceipt("receipts/R-reality/capability-spec.json"),
+    openReceipt("receipts/R-reality/research-spine.json"),
+    openReceipt("receipts/R-reality/graph-context.json"),
+  ]);
+  completeRalphMilestone(openPrometheusRoot, "A", [
+    openReceipt("receipts/A-acceptance-bar/benchmark-choice.json"),
+    openReceipt("receipts/A-acceptance-bar/rubric.json"),
+    openReceipt("receipts/A-acceptance-bar/heldout-split-policy.json"),
+  ]);
+  startRalphMilestone(openPrometheusRoot, "L");
+  completeRalphMilestone(openPrometheusRoot, "L", [
+    openReceipt("receipts/L-live-build/agent-api-contract.json"),
+    openReceipt("receipts/L-live-build/design-brief.md"),
+    openReceipt("receipts/L-live-build/build-note.md"),
+  ]);
+  let openRun = makePrometheusRun({
+    goal: "interactive 3D eyewear product page",
+    target: "3d-web-asset",
+    runId: "prom-open",
+    createdAt: "2026-06-24T00:00:00.000Z",
+  });
+  openRun = appendPrometheusVersion({
+    run: openRun,
+    gateStatuses: {
+      "direction.receipt": "pass",
+      "research.brief": "pass",
+      "proof.live-ui": "pass",
+      "asset.part-graph": "pass",
+      "asset.export-reopen": "partial",
+      "asset.r3f-viewer": "pass",
+      "asset.performance": "blocked",
+    },
+  });
+  writePrometheusRun(openPrometheusRoot, openRun);
+  const openPrometheusJudge = judgeCurrentLoop({ projectPath: openPrometheusRoot, lastAssistantMessage: "done" });
+  check(
+    "fresh-context judge blocks unfinished Prometheus latest version",
+    openPrometheusJudge.verdict.verdict === "not_done" && openPrometheusJudge.verdict.reason.includes("Prometheus Mode run"),
+    openPrometheusJudge.verdict.reason,
+  );
 
   console.log("\nThreeDPartResearchRalph (per-component function + assembly research loop):");
   const partResearchReceipt = makeThreeDPartResearchRalphReceipt({

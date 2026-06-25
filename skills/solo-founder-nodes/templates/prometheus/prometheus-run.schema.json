@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solo-founder.local/schemas/prometheus-run.schema.json",
+  "title": "Prometheus Mode Run",
+  "type": "object",
+  "required": ["schemaVersion", "runKind", "runId", "goal", "target", "status", "versions", "improvementPlans"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runKind": { "const": "prometheus-versioned-engineering-loop" },
+    "runId": { "type": "string" },
+    "goal": { "type": "string", "minLength": 1 },
+    "target": {
+      "enum": [
+        "3d-web-asset",
+        "finance-workflow",
+        "spreadsheet-model",
+        "agent-app",
+        "mobile-app",
+        "dashboard",
+        "data-pipeline",
+        "deck-report"
+      ]
+    },
+    "maxVersions": { "type": "integer", "minimum": 1 },
+    "status": { "enum": ["running", "completed", "exhausted"] },
+    "versions": { "type": "array", "items": { "$ref": "version.schema.json" } },
+    "improvementPlans": { "type": "array", "items": { "$ref": "improvement-plan.schema.json" } }
+  }
+}

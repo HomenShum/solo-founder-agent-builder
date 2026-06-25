@@ -17,6 +17,7 @@ import {
   verifyDirectionChangeReceipt,
 } from "../direction/directionRalph";
 import { readSystemMapGraph, validateSystemMapGraph } from "../architecture/architectureGovernor";
+import { readPrometheusRun, verifyPrometheusRun } from "../prometheus/prometheusMode";
 
 export type FreshContextJudgeVerdictKind =
   | "done"
@@ -52,6 +53,15 @@ export type FreshContextJudgeInput = {
     ok: boolean;
     reason: string;
     missingProofs: string[];
+  };
+  prometheusLayer: {
+    exists: boolean;
+    ok: boolean;
+    reason: string;
+    missingProofs: string[];
+    runId?: string;
+    latestVersionId?: string;
+    latestScore?: number;
   };
   lastAssistantMessage?: string;
 };
@@ -101,6 +111,7 @@ export function makeFreshContextJudgeInput(input: {
     lastAssistantMessage: input.lastAssistantMessage,
     recentEvents,
   });
+  const prometheusLayer = readPrometheusLayer(projectPath);
   return {
     schemaVersion: 1,
     projectPath,
@@ -112,6 +123,7 @@ export function makeFreshContextJudgeInput(input: {
     proofVerdict,
     componentLayer,
     directionLayer,
+    prometheusLayer,
     lastAssistantMessage: input.lastAssistantMessage,
   };
 }
@@ -207,6 +219,28 @@ export function deterministicFreshContextJudge(input: FreshContextJudgeInput): F
         receipt,
         description: `Create or verify required receipt ${receipt}.`,
       })),
+    });
+  }
+
+  if (input.prometheusLayer.exists && input.prometheusLayer.ok !== true) {
+    return verdict({
+      kind: "not_done",
+      confidence: 0.96,
+      currentMilestone: current,
+      reason: input.prometheusLayer.reason,
+      missingReceipts: input.prometheusLayer.missingProofs,
+      actions: [
+        {
+          kind: "command",
+          command: "npm run sfn -- prometheus status --project .",
+          description: "Inspect the current versioned engineering loop before claiming completion.",
+        },
+        {
+          kind: "command",
+          command: "npm run sfn -- prometheus run --project . --record",
+          description: "Continue the Prometheus run or publish the honest best-version verdict.",
+        },
+      ],
     });
   }
 
@@ -388,6 +422,36 @@ function readComponentLayer(projectPath: string, loop?: SoloLoopRun): FreshConte
     status: result.status,
     reason: result.reason,
     missingProofs: result.missingProofs,
+  };
+}
+
+function readPrometheusLayer(projectPath: string): FreshContextJudgeInput["prometheusLayer"] {
+  const run = readPrometheusRun(projectPath);
+  if (!run) {
+    return {
+      exists: false,
+      ok: true,
+      reason: "No Prometheus versioned engineering loop is active.",
+      missingProofs: [],
+    };
+  }
+  const verification = verifyPrometheusRun(run);
+  const latestPasses = verification.latestVerdict === "pass";
+  const ok = verification.errors.length === 0 && latestPasses;
+  return {
+    exists: true,
+    ok,
+    reason: ok
+      ? "Prometheus run has a passing latest version."
+      : `Prometheus Mode run ${run.runId} is still open: latest ${verification.latestVersionId ?? "none"} is ${verification.latestVerdict ?? "missing"} at score ${verification.latestScore ?? 0}.`,
+    missingProofs: verification.missingProofs.length
+      ? verification.missingProofs
+      : latestPasses
+        ? []
+        : [".solo/prometheus/runs/<run>/versions/<next>/proof-receipt.json"],
+    runId: run.runId,
+    latestVersionId: verification.latestVersionId,
+    latestScore: verification.latestScore,
   };
 }
 

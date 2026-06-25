@@ -65,6 +65,10 @@ npm run sfn -- intent ralph-verify --receipt intent-ralph.json --base docs/proof
 npm run sfn -- component init --goal "build a coherent 3D asset app" --domain 3d-generation --project .
 npm run sfn -- component decompose --input "wooden chair from image" --domain 3d-generation --out component-tree.json
 npm run sfn -- component proof --all --project .
+npm run sfn -- prometheus init --goal "interactive 3D eyewear product page" --target 3d-web-asset --project .
+npm run sfn -- prometheus run --goal "interactive 3D eyewear product page" --iterations 3 --record --project .
+npm run sfn -- prometheus compare --project .
+npm run sfn -- prometheus publish --project .
 npm run sfn -- 3d plan --goal "first-party picture/text to 3D app"
 npm run sfn -- 3d part-research-plan --goal "coherent eyewear 3D asset" --out part-research.json  # 3D-specific adapter
 npm run sfn -- 3d part-research-verify --receipt part-research.json --base docs/proof
@@ -134,6 +138,10 @@ npm run sfn -- ledger verify <runId>        # re-verify a run's hash-chain (tamp
 - **`component-ralph/` - generic Component RALPH**: creates `.solo/ledgers/component-ralph.json`
   for compositional outputs and blocks parent L/P/H claims until production-critical child components
   have R/A/L/P/H receipts and proof gates. This is generic; 3D part research is one adapter on top.
+- **`prometheus/` - Prometheus Mode**: versioned engineering loop over any supported artifact domain.
+  It records v0/v1/... hypotheses, changes, component gates, proof references, scores, failure
+  analysis, improvement plans, comparison data, and replay HTML. It improves artifacts and harnesses
+  through receipts; it does not claim model self-training.
 - **`agentApi/` - Agent-ready API gate**: semantic tool contracts, provider-schema parity, and
   structured failure/recovery checks.
 - **`proof/` - Fresh-room and full proof receipts**: live browser proof receipts with trace/video/screenshots,

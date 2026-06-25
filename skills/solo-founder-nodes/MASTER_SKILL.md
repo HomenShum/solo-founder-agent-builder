@@ -203,6 +203,21 @@ missing or any required child proof is incomplete. Use `npm run sfn -- component
 copyable implementation: [`templates/component-ralph/`](templates/component-ralph/). Doctrine:
 **No component proof, no parent claim.**
 
+**Prometheus Mode (versioned engineering loop):** when the user wants a product to improve over
+attempts, or when the proof story is "watch the artifact get better," wrap the parent RALPH loop in
+Prometheus Mode:
+`npm run sfn -- prometheus init --goal "<goal>" --target <domain> --project .`,
+`npm run sfn -- prometheus run --goal "<goal>" --iterations <n> --record --project .`,
+`npm run sfn -- prometheus compare --project .`, and
+`npm run sfn -- prometheus publish --project .`. Each version must record a hypothesis, changed
+artifact surfaces, component gates, proof references, score, cost/runtime/model/tool usage, failure
+analysis, and next-version improvement plan. This is not model self-training; it is artifact and
+harness improvement through receipts. The fresh-context judge blocks final claims for active
+Prometheus runs whose latest version has not passed. Doctrine:
+[`references/prometheus-mode.md`](references/prometheus-mode.md); copyable implementation:
+[`templates/prometheus/`](templates/prometheus/). Doctrine:
+**Every version needs proof; every failed proof needs a next-version plan.**
+
 ## Research spine (required for research-backed implementation)
 
 The agent must not turn a founder's domain prompt into unsupported architecture or product claims. At

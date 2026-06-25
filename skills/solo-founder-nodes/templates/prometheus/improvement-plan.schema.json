@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://solo-founder.local/schemas/prometheus-improvement-plan.schema.json",
+  "title": "Prometheus Improvement Plan",
+  "type": "object",
+  "required": ["planId", "createdAt", "fromVersionId", "targetVersionId", "hypothesis", "actions", "expectedGateImprovements"],
+  "properties": {
+    "planId": { "type": "string" },
+    "createdAt": { "type": "string" },
+    "fromVersionId": { "type": "string" },
+    "targetVersionId": { "type": "string" },
+    "hypothesis": { "type": "string" },
+    "actions": { "type": "array", "items": { "type": "string" } },
+    "expectedGateImprovements": { "type": "array", "items": { "type": "string" } }
+  }
+}
