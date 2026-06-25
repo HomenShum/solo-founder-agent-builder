@@ -80,3 +80,18 @@ asset, mesh validation, reopen proof, UI screenshot, cost/latency or hosted-run 
 blocked-claim verdict. For TRELLIS.2 Space specifically, require the uploaded-source screenshot or
 receipt, `Generate` run evidence, `Extract GLB` downloaded asset, mesh validation, reopen proof, and
 the asset loaded back into the actual product UI before saying "TRELLIS.2-generated."
+
+Tiered hosted proof:
+
+- `generated-output`: passes only when the hosted lane returns a concrete GLB/OBJ/mesh, hash, source
+  policy, runtime/hosted-run receipt, and no-secret transcript.
+- `app-import`: passes only when that exact output is loaded in the actual product UI and the proof
+  run captures screenshot/video/trace evidence.
+- `asset-quality`: remains blocked until mesh validation is clean or repaired, DCC reopen passes, UV
+  and PBR material receipts exist, topology/retopology is inspected, and the target-domain benchmark
+  scorecard passes.
+
+Do not turn a hosted GLB into a professional asset claim just because it looks good in the viewer. If
+validation reports zero-length normals, bufferView issues, non-manifold geometry, missing UVs, missing
+materials, or weak topology, record those findings and keep industry-grade/game-ready/CAD-ready claims
+blocked.

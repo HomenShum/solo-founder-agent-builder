@@ -332,6 +332,10 @@ Hugging Face Jobs GPU, a hosted Hunyuan3D Space, the Microsoft TRELLIS.2 hosted 
 Endpoint, or another approved GPU cloud; the same source/privacy, runtime/output, mesh validation,
 reopen, and actual UI proof contract still applies. Doctrine: [`references/local-3d-model-ralph.md`](references/local-3d-model-ralph.md);
 copyable implementation: [`templates/threeD/localModelRalph.ts`](templates/threeD/localModelRalph.ts).
+Hosted generation proof is a tiered claim, not a blank check. A remote model lane may pass
+`generated-output` and `app-import` after a GLB/mesh is produced and loaded in the live UI, while
+`asset-quality`, `industry-grade`, `game-ready`, `CAD-ready`, or `customer-ready` remain blocked until
+mesh validation, DCC reopen, UV/PBR, topology/retopology, rig/performance, and benchmark receipts pass.
 
 **3D asset quality gate:** coherent/prototype/industry-grade asset claims require more than a visible
 OBJ. Before building, run `npm run sfn -- 3d quality-plan --goal "<goal>" --target

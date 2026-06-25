@@ -197,6 +197,10 @@ the Microsoft TRELLIS.2 hosted Space, Inference Endpoints, or another approved r
 the same source/privacy, output, mesh validation, reopen, and live-UI proof requirements. Doctrine:
 [`references/local-3d-model-ralph.md`](references/local-3d-model-ralph.md); implementation:
 [`templates/threeD/localModelRalph.ts`](templates/threeD/localModelRalph.ts).
+Do not collapse hosted generation into asset quality. A hosted model can pass `generated-output` and
+`app-import` proof while still failing `asset-quality` because of validator errors, missing UV/PBR,
+missing DCC reopen, weak topology, or missing rig/performance evidence. The proof verdict must name
+the exact tier that passed and keep every higher claim blocked.
 
 **Engineering invention harness:** for urgent, safety-critical, medical, life-support, field-repair, or
 "life and death" engineering requests, use

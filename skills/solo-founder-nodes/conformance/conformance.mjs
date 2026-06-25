@@ -124,7 +124,7 @@ ok("3D/fresh-user/trust proof directives present", /3D founder scenario/i.test(m
 ok("industry-grade 3D asset quality gate directive present", /3D asset quality gate/i.test(master) && /3d quality-plan/i.test(master) && /assetQualityGate/i.test(master));
 ok("3D part-research RALPH directive present", /part-research RALPH/i.test(master) && /3d part-research-plan/i.test(master) && /partResearchRalph/i.test(master));
 ok("local 3D model RALPH directive present", /Local 3D model RALPH/i.test(master) && /3d model-plan/i.test(master) && /Hunyuan3D-2\.0/i.test(master) && /TRELLIS/i.test(master));
-ok("hosted 3D model fallback directive present", /TRELLIS\.2 hosted Space/i.test(master) && /source\/privacy/i.test(master) && /actual UI proof/i.test(master));
+ok("hosted 3D model fallback directive present", /TRELLIS\.2 hosted Space/i.test(master) && /source\/privacy/i.test(master) && /actual UI proof/i.test(master) && /app-import/i.test(master) && /asset-quality/i.test(master));
 ok("engineering invention harness directive present", /Engineering invention harness/i.test(master) && /engineering plan/i.test(master) && /non-exportable study sandbox/i.test(master));
 
 // 5. Portability declared (no single-agent lock-in): the directive names multiple agents / "any coding agent".

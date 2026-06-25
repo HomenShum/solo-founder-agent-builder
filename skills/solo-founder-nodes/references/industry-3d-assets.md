@@ -79,5 +79,8 @@ Fail-closed rules:
 - A game/CAD/customer/marketplace claim cannot pass if the output only proves a research scaffold.
 - Hunyuan3D-2.0/TRELLIS output cannot be claimed if the local model RALPH lane is planned, blocked, or
   missing runtime/output/reopen proof.
+- Hosted model output cannot pass asset-quality or industry-grade solely from a successful Space/API
+  run. Generated-output proof and live app-import proof are lower tiers; clean validation, DCC reopen,
+  UV/PBR, topology, target-domain fixtures, and benchmark scorecards are still required.
 - Exact replica export and source-derived protected mesh/texture remain blocked unless rights,
   provenance, and user-owned approval are explicitly proven outside the agent.
