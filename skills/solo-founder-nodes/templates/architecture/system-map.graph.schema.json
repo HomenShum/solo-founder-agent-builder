@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Solo Founder System Map Graph",
+  "type": "object",
+  "required": ["schemaVersion", "projectGoal", "nodes", "edges", "governance"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "projectGoal": { "type": "string" },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "kind"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "kind": {
+            "enum": ["ui", "agent", "tool", "data", "storage", "proof", "research", "deployment", "external"]
+          },
+          "path": { "type": "string" },
+          "owner": { "type": "string" }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to", "relation"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "relation": { "type": "string" }
+        }
+      }
+    },
+    "governance": {
+      "type": "object",
+      "required": [
+        "architectureGovernorRequired",
+        "updateRequiredWhenDirectionChanges",
+        "ciShouldFailOnStaleGraph"
+      ]
+    }
+  }
+}

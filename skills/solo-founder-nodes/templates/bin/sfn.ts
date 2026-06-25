@@ -34,6 +34,44 @@ import {
   type ResearchPack,
 } from "../research/researchSpine";
 import {
+  classifyResearchSource,
+  makeResearchBrief,
+  researchBriefPath,
+  researchGovernorDomains,
+  verifyResearchBrief,
+  writeResearchBrief,
+  type ResearchBrief,
+  type ResearchGovernorDomain,
+  type ResearchGovernorSource,
+} from "../research/researchGovernor";
+import {
+  directionChangedByText,
+  directionQualityTiers,
+  directionPaths,
+  makeDirectionChangeReceipt,
+  makeDirectionDecision,
+  makeDirectionImpact,
+  makeDirectionIntake,
+  makeDirectionProposal,
+  readDirectionChangeReceipt,
+  renderDirectionDecisionMarkdown,
+  renderDirectionIntakeMarkdown,
+  verifyDirectionChangeReceipt,
+  verifyDirectionProposal,
+  writeDirectionProtocol,
+  type DirectionDecision,
+  type DirectionProposal,
+  type DirectionQualityTier,
+} from "../direction/directionRalph";
+import {
+  makeSystemMapGraph,
+  readSystemMapGraph,
+  renderSystemMapMermaid,
+  validateSystemMapGraph,
+  writeSystemMapGraph,
+  type SystemMapGraph,
+} from "../architecture/architectureGovernor";
+import {
   designAgentRuntimes,
   designStylePresets,
   designSkillRegistry,
@@ -282,6 +320,40 @@ function parseProofScope(value?: string): ProofScope {
   throw new Error(`unsupported proof scope '${normalized}' (expected one of: ${proofScopes.join(", ")})`);
 }
 
+function parseResearchGovernorDomain(value?: string): ResearchGovernorDomain {
+  const normalized = value ?? "generic-product";
+  if (researchGovernorDomains.includes(normalized as ResearchGovernorDomain)) return normalized as ResearchGovernorDomain;
+  throw new Error(`unsupported research governor domain '${normalized}' (expected one of: ${researchGovernorDomains.join(", ")})`);
+}
+
+function parseDirectionDecision(value?: string): DirectionDecision["decision"] {
+  const normalized = value ?? "accepted";
+  if (["accepted", "parked", "rejected"].includes(normalized)) return normalized as DirectionDecision["decision"];
+  throw new Error(`unsupported direction decision '${normalized}' (expected accepted|parked|rejected)`);
+}
+
+function parseDirectionQualityTier(value?: string): DirectionQualityTier | undefined {
+  if (!value) return undefined;
+  if (directionQualityTiers.includes(value as DirectionQualityTier)) return value as DirectionQualityTier;
+  throw new Error(`unsupported direction quality tier '${value}' (expected one of: ${directionQualityTiers.join(", ")})`);
+}
+
+function readDirectionDecisionFile(path: string, pivotId: string): DirectionDecision {
+  if (path.endsWith(".json")) return readJson<DirectionDecision>(path);
+  const text = readFileSync(path, "utf8");
+  const decision = parseDirectionDecision(text.match(/Decision:\s*(accepted|parked|rejected)/i)?.[1]);
+  const rationale = text.match(/Rationale:\s*(.+)/i)?.[1]?.trim();
+  return makeDirectionDecision({ pivotId, decision, rationale });
+}
+
+function readInputText(args: string[], fallback = "") {
+  const inline = flag(args, "--input");
+  if (inline) return inline;
+  const file = flag(args, "--file");
+  if (file) return readFileSync(resolve(file), "utf8");
+  return fallback;
+}
+
 function slugify(input: string) {
   return input.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64) || "proof-run";
 }
@@ -445,7 +517,16 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   rework list [--project <path>]
   rework explain --ledger <file> [--base <dir>]
   research init --goal <g> --domain <d> [--scope production|local-personal-research] [--out <file>]
+  research classify --title <t> --url <u> [--domain <d>] [--out <file>]
+  research brief --goal <g> [--domain <d>] [--project <path>] [--source <json>] [--out <file>]
   research verify [file] [--max-age-days <n>]
+  direction intake (--input <text>|--file <path>) [--project <path>] [--pivot <id>] [--out <file>]
+  direction propose --goal <g> [--project <path>] [--pivot <id>] [--intake <file>] [--old <text>] [--new <text>] [--tier T0..T5] [--out <file>]
+  direction decide --pivot <id> --decision accepted|parked|rejected [--project <path>] [--rationale <text>] [--out <file>]
+  direction apply --pivot <id> [--project <path>] [--proposal <file>] [--decision <file>] [--out <file>]
+  graph init --goal <g> [--project <path>] [--out <file>]
+  graph validate [--project <path>] [--file <file>]
+  graph render [--project <path>] [--file <file>] [--out <file>]
   proof init --goal <g> --domain <d> [--scope production|local-personal-research] [--out <dir>]
   proof start --run <dir>
   proof receipt --run <dir>
@@ -1131,6 +1212,155 @@ async function main() {
       console.error("rework: add | list | explain | verify");
       process.exit(2);
     }
+    case "direction": {
+      const sub = rest[0];
+      const projectPath = resolve(flag(rest, "--project", ".")!);
+      const pivotId = flag(rest, "--pivot", "pivot-001")!;
+      const paths = directionPaths(projectPath, pivotId);
+      if (sub === "intake") {
+        const sourceText = readInputText(rest.slice(1));
+        if (!sourceText.trim()) {
+          console.error("direction intake (--input <text>|--file <path>) [--project <path>] [--pivot <id>] [--out <file>]");
+          process.exit(2);
+        }
+        const intake = makeDirectionIntake({ sourceText, pivotId });
+        const out = resolve(flag(rest, "--out", paths.intakePath)!);
+        mkdirSync(dirname(out), { recursive: true });
+        if (out.endsWith(".json")) writeJson(out, intake);
+        else writeFileSync(out, renderDirectionIntakeMarkdown(intake), "utf8");
+        recordSoloEvent(projectPath, {
+          event: "prompt.submit",
+          agentHost: "sfn",
+          status: intake.changedDirection ? "info" : "ok",
+          message: `direction intake ${intake.changedDirection ? "detected" : "not detected"}: ${intake.triggerTerms.join(", ") || "none"}`,
+          receiptPath: out,
+          source: "sfn-direction",
+        });
+        console.log(JSON.stringify({ out, changedDirection: intake.changedDirection, intake }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "propose") {
+        const goal = flag(rest, "--goal");
+        if (!goal) {
+          console.error("direction propose --goal <g> [--project <path>] [--pivot <id>] [--intake <file>] [--old <text>] [--new <text>] [--tier T0..T5] [--out <file>]");
+          process.exit(2);
+        }
+        const intakeFile = flag(rest, "--intake");
+        const sourceText = intakeFile && existsSync(resolve(intakeFile))
+          ? readFileSync(resolve(intakeFile), "utf8")
+          : readInputText(rest.slice(1), goal);
+        const intake = intakeFile?.endsWith(".json")
+          ? readJson<ReturnType<typeof makeDirectionIntake>>(resolve(intakeFile))
+          : makeDirectionIntake({ sourceText, pivotId });
+        const proposal = makeDirectionProposal({
+          goal,
+          intake,
+          oldDirection: flag(rest, "--old"),
+          proposedDirection: flag(rest, "--new"),
+          targetQualityTier: parseDirectionQualityTier(flag(rest, "--tier")),
+        });
+        const verdict = verifyDirectionProposal(proposal);
+        const out = resolve(flag(rest, "--out", paths.proposalPath)!);
+        writeJson(out, proposal);
+        console.log(JSON.stringify({ out, verdict, proposal }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      if (sub === "decide") {
+        const decision = makeDirectionDecision({
+          pivotId,
+          decision: parseDirectionDecision(flag(rest, "--decision", "accepted")),
+          rationale: flag(rest, "--rationale"),
+        });
+        const out = resolve(flag(rest, "--out", paths.decisionPath)!);
+        mkdirSync(dirname(out), { recursive: true });
+        if (out.endsWith(".json")) writeJson(out, decision);
+        else writeFileSync(out, renderDirectionDecisionMarkdown(decision), "utf8");
+        console.log(JSON.stringify({ out, decision }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "apply") {
+        const proposalPath = resolve(flag(rest, "--proposal", paths.proposalPath)!);
+        const decisionArg = flag(rest, "--decision");
+        const decisionFileArg = flag(rest, "--decision-file") ?? (decisionArg && existsSync(resolve(decisionArg)) ? decisionArg : undefined);
+        const decisionPath = resolve(decisionFileArg ?? paths.decisionPath);
+        if (!existsSync(proposalPath)) {
+          console.error(`missing direction proposal: ${proposalPath}`);
+          process.exit(2);
+        }
+        const proposal = readJson<DirectionProposal>(proposalPath);
+        const decision = existsSync(decisionPath)
+          ? readDirectionDecisionFile(decisionPath, pivotId)
+          : makeDirectionDecision({
+              pivotId,
+              decision: parseDirectionDecision(decisionArg && !existsSync(resolve(decisionArg)) ? decisionArg : "accepted"),
+              rationale: flag(rest, "--rationale"),
+            });
+        const receipt = makeDirectionChangeReceipt({ proposal, decision });
+        const impact = makeDirectionImpact({ proposal, decision });
+        const verdict = verifyDirectionChangeReceipt(receipt);
+        writeDirectionProtocol(projectPath, {
+          intake: makeDirectionIntake({ sourceText: proposal.reason, pivotId: proposal.pivotId }),
+          proposal,
+          decision,
+        });
+        const out = resolve(flag(rest, "--out", paths.directionReceiptPath)!);
+        if (out !== paths.directionReceiptPath) writeJson(out, receipt);
+        recordSoloEvent(projectPath, {
+          event: "receipt.write",
+          agentHost: "sfn",
+          milestone: "R",
+          status: verdict.ok ? "ok" : "error",
+          message: `direction ${decision.decision}: ${proposal.proposedDirection}`,
+          receiptPath: out,
+          source: "sfn-direction",
+        });
+        console.log(JSON.stringify({ out, impact, verdict, receipt }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      console.error("direction: intake | propose | decide | apply");
+      process.exit(2);
+    }
+    case "graph": {
+      const sub = rest[0];
+      const projectPath = resolve(flag(rest, "--project", ".")!);
+      const defaultPath = join(projectPath, "docs", "system-map.graph.json");
+      if (sub === "init") {
+        const goal = flag(rest, "--goal");
+        if (!goal) {
+          console.error("graph init --goal <g> [--project <path>] [--out <file>]");
+          process.exit(2);
+        }
+        const graph = makeSystemMapGraph({ projectGoal: goal });
+        const out = writeSystemMapGraph(resolve(flag(rest, "--out", defaultPath)!), graph);
+        const verdict = validateSystemMapGraph(graph);
+        console.log(JSON.stringify({ out, verdict, graph }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      if (sub === "validate") {
+        const file = resolve(flag(rest, "--file", defaultPath)!);
+        const graph = readSystemMapGraph(file);
+        const verdict = validateSystemMapGraph(graph);
+        console.log(JSON.stringify({ file, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      if (sub === "render") {
+        const file = resolve(flag(rest, "--file", defaultPath)!);
+        const graph = readSystemMapGraph(file);
+        const mermaid = renderSystemMapMermaid(graph);
+        const out = flag(rest, "--out");
+        if (out) {
+          const absOut = resolve(out);
+          mkdirSync(dirname(absOut), { recursive: true });
+          writeFileSync(absOut, `\`\`\`mermaid\n${mermaid}\`\`\`\n`, "utf8");
+          console.log(JSON.stringify({ out: absOut, mermaid }, jbig, 2));
+        } else {
+          console.log(mermaid);
+        }
+        process.exit(0);
+      }
+      console.error("graph: init | validate | render");
+      process.exit(2);
+    }
     case "setup": {
       const sub = rest[0];
       if (sub !== "gate") {
@@ -1162,6 +1392,42 @@ async function main() {
     }
     case "research": {
       const sub = rest[0];
+      if (sub === "classify") {
+        const title = flag(rest, "--title");
+        const url = flag(rest, "--url");
+        if (!title || !url) {
+          console.error("research classify --title <t> --url <u> [--domain <d>] [--out <file>]");
+          process.exit(2);
+        }
+        const source = classifyResearchSource({
+          title,
+          url,
+          domain: flag(rest, "--domain") ? parseResearchGovernorDomain(flag(rest, "--domain")) : undefined,
+        });
+        const out = flag(rest, "--out");
+        if (out) writeJson(resolve(out), source);
+        console.log(JSON.stringify(out ? { out: resolve(out), source } : source, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "brief") {
+        const goal = flag(rest, "--goal");
+        const projectPath = resolve(flag(rest, "--project", ".")!);
+        if (!goal) {
+          console.error("research brief --goal <g> [--domain <d>] [--project <path>] [--source <json>] [--out <file>]");
+          process.exit(2);
+        }
+        const sources = flags(rest, "--source").map((sourcePath) => readJson<ResearchGovernorSource>(resolve(sourcePath)));
+        const brief = makeResearchBrief({
+          goal,
+          domain: parseResearchGovernorDomain(flag(rest, "--domain")),
+          sources,
+        });
+        const verdict = verifyResearchBrief(brief);
+        const out = resolve(flag(rest, "--out", researchBriefPath(projectPath, brief.briefId))!);
+        writeResearchBrief(out, brief);
+        console.log(JSON.stringify({ out, verdict, brief }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
       if (sub === "init") {
         const goal = flag(rest, "--goal");
         const domain = parseDomain(flag(rest, "--domain", "3d-generation"));
@@ -1180,12 +1446,14 @@ async function main() {
       if (sub === "verify") {
         const file = resolve(firstPositional(rest.slice(1), "research-spine.json"));
         const maxSourceAgeDays = Number(flag(rest, "--max-age-days", "365"));
-        const pack = readJson<ResearchPack>(file);
-        const verdict = verifyResearchPack(pack, { maxSourceAgeDays });
+        const parsed = readJson<ResearchPack | ResearchBrief>(file);
+        const verdict = "briefId" in parsed
+          ? verifyResearchBrief(parsed, { maxSourceAgeDays })
+          : verifyResearchPack(parsed, { maxSourceAgeDays });
         console.log(JSON.stringify({ file, verdict }, jbig, 2));
         process.exit(verdict.ok ? 0 : 1);
       }
-      console.error("research: init | verify");
+      console.error("research: init | classify | brief | verify");
       process.exit(2);
     }
     case "proof": {

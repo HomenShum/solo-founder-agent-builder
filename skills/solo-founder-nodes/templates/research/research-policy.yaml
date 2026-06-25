@@ -1,0 +1,19 @@
+schemaVersion: 1
+name: research-governor-policy
+sourceTiers:
+  primary: peer reviewed or preprint research, standards, formal benchmark papers
+  official: official docs, specifications, SDK docs, registry docs
+  benchmark: datasets, leaderboards, scorer specs, held-out task definitions
+  product: competitor or inspiration product references, never proof by itself
+  community: tutorials, posts, examples, useful only as supporting implementation context
+rules:
+  - Major implementation decisions require at least one primary, official, or benchmark source.
+  - Product inspirations must be classified as adopt, adapt, park, or reject before code changes.
+  - Sources older than the configured staleAfterDays require a latest-check refresh.
+  - A research citation never counts as product proof; proof must come from the live app, artifact, or benchmark lane.
+  - Unsupported assumptions must be labeled and routed to the proof registry before public claims.
+directionChange:
+  requiresBrief: true
+  requiresSystemMapUpdate: true
+  requiresProofRegistryUpdate: true
+  defaultStaleAfterDays: 90

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Solo Founder Direction Proposal",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "pivotId",
+    "status",
+    "oldDirection",
+    "proposedDirection",
+    "targetQualityTier",
+    "directionRalph",
+    "requiredUpdates",
+    "newRequiredReceipts",
+    "nonClaims"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "pivotId": { "type": "string" },
+    "status": { "const": "proposed" },
+    "oldDirection": { "type": "string", "minLength": 1 },
+    "proposedDirection": { "type": "string", "minLength": 1 },
+    "targetQualityTier": { "enum": ["T0", "T1", "T2", "T3", "T4", "T5"] },
+    "directionRalph": {
+      "type": "object",
+      "required": ["R", "A", "L", "P", "H"]
+    },
+    "requiredUpdates": {
+      "type": "object",
+      "required": [
+        "researchSpine",
+        "systemMapGraph",
+        "proofRegistry",
+        "componentRalphLedger",
+        "architectureGovernor",
+        "researchGovernor",
+        "freshContextJudge"
+      ]
+    },
+    "newRequiredReceipts": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+    "invalidatedReceipts": { "type": "array", "items": { "type": "string" } },
+    "nonClaims": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+  }
+}

@@ -11,6 +11,18 @@ import { sha256 } from "./ledger/hash";
 import { inspectGraphContext, graphQueryPlan } from "./context/graphContext";
 import { SoloControlPlane, loopPhases } from "./control/controlPlane";
 import { make3dAgentResearchPack, top3dComparisonRubric, verifyResearchPack, type ResearchPack } from "./research/researchSpine";
+import { classifyResearchSource, makeResearchBrief, verifyResearchBrief } from "./research/researchGovernor";
+import { makeSystemMapGraph, renderSystemMapMermaid, validateSystemMapGraph, writeSystemMapGraph } from "./architecture/architectureGovernor";
+import {
+  directionChangedByText,
+  directionPaths,
+  makeDirectionChangeReceipt,
+  makeDirectionDecision,
+  makeDirectionIntake,
+  makeDirectionProposal,
+  verifyDirectionChangeReceipt,
+  verifyDirectionProposal,
+} from "./direction/directionRalph";
 import { designSkillRegistry, makeDesignFullFlow, recommendDesignSkills, verifyDesignFullFlow, verifyDesignSkillPlan, type DesignFullFlowPlan } from "./design/designSkillBridge";
 import { defaultDesignQualityCriteria, makeDesignQualityReceipt, verifyDesignQualityReceipt, type DesignQualityGateInput } from "./design/designQualityGate";
 import {
@@ -850,6 +862,87 @@ async function main() {
   weakTweak.requiredActions.rerunFreshContextJudge = false;
   const weakTweakVerdict = verifyIdeaTweakReceipt(weakTweak);
   check("idea tweak rejects silent scope creep without proof and fresh judge rerun", weakTweakVerdict.ok === false && weakTweakVerdict.errors.some((e) => e.includes("require proof")) && weakTweakVerdict.errors.some((e) => e.includes("fresh-context judge")));
+
+  console.log("\nDirectionRalph + Governors (direction-changing inspiration gate):");
+  const directionText = [
+    "Instead of integrating Spline or Emergent, make our own OSS interactive 3D asset pipeline.",
+    "Use Bruno Simon and Igloo as a gold standard for WebGL quality.",
+    "Add a Research Governor, Architecture Governor, and Proof Registry so claims are proven.",
+  ].join(" ");
+  const directionIntake = makeDirectionIntake({ sourceText: directionText, pivotId: "pivot-001", createdAt: "2026-06-24T00:00:00.000Z" });
+  check("direction intake detects pivot language", directionIntake.changedDirection && directionChangedByText(directionText) && directionIntake.items.length >= 4);
+  const directionProposal = makeDirectionProposal({
+    goal: "Owned OSS interactive 3D asset pipeline with proof registry.",
+    intake: directionIntake,
+    oldDirection: "Provider-first scaffold demo.",
+    proposedDirection: "OSS, agent-driven pipeline for web-ready 3D experiences.",
+    targetQualityTier: "T3",
+    createdAt: "2026-06-24T00:00:00.000Z",
+  });
+  const directionProposalVerdict = verifyDirectionProposal(directionProposal);
+  check("direction proposal requires all RALPH stages and proof updates", directionProposalVerdict.ok, directionProposalVerdict.errors.join("; "));
+  const directionDecision = makeDirectionDecision({
+    pivotId: "pivot-001",
+    decision: "accepted",
+    rationale: "User chose owned OSS pipeline over provider-only integration.",
+    decidedAt: "2026-06-24T00:00:00.000Z",
+  });
+  const directionReceipt = makeDirectionChangeReceipt({ proposal: directionProposal, decision: directionDecision });
+  const directionReceiptVerdict = verifyDirectionChangeReceipt(directionReceipt);
+  check("direction change receipt verifies accepted pivot", directionReceiptVerdict.ok && directionReceipt.newDirection.includes("OSS"), directionReceiptVerdict.errors.join("; "));
+
+  const gltfSource = classifyResearchSource({
+    id: "khronos-gltf",
+    title: "Khronos glTF runtime asset delivery",
+    url: "https://www.khronos.org/gltf/",
+    domain: "3d-asset-pipeline",
+    verifiedAt: "2026-06-24T00:00:00.000Z",
+  });
+  const researchBrief = makeResearchBrief({
+    goal: "Build a web-ready 3D asset pipeline",
+    domain: "3d-asset-pipeline",
+    sources: [gltfSource],
+    createdAt: "2026-06-24T00:00:00.000Z",
+    latestCheckAt: "2026-06-24T00:00:00.000Z",
+    staleAfterDays: 180,
+  });
+  const researchBriefVerdict = verifyResearchBrief(researchBrief, { now: new Date("2026-06-24T00:00:00.000Z") });
+  check("research governor verifies fresh source-backed implementation brief", researchBriefVerdict.ok, researchBriefVerdict.errors.join("; "));
+  const staleBrief = clone(researchBrief);
+  staleBrief.sources[0].verifiedAt = "2024-01-01T00:00:00.000Z";
+  const staleBriefVerdict = verifyResearchBrief(staleBrief, { now: new Date("2026-06-24T00:00:00.000Z"), maxSourceAgeDays: 90 });
+  check("research governor rejects stale source checks", staleBriefVerdict.ok === false && staleBriefVerdict.errors.some((error) => error.includes("stale")));
+  const systemMap = makeSystemMapGraph({ projectGoal: "Owned OSS interactive 3D asset pipeline.", generatedAt: "2026-06-24T00:00:00.000Z" });
+  const systemMapVerdict = validateSystemMapGraph(systemMap);
+  check("architecture governor validates default system map", systemMapVerdict.ok && renderSystemMapMermaid(systemMap).includes("Proof registry"), systemMapVerdict.errors.join("; "));
+
+  const directionJudgeRoot = mkdtempSync(join(tmpdir(), `solo-direction-judge-${process.pid}-`));
+  createRalphLedger({ repoPath: directionJudgeRoot, goal: "Owned OSS interactive 3D asset pipeline", now: "2026-06-24T00:00:00.000Z" });
+  recordSoloEvent(directionJudgeRoot, {
+    event: "prompt.submit",
+    agentHost: "smoke",
+    status: "info",
+    message: directionText,
+    source: "smoke",
+  });
+  const missingDirectionJudge = judgeCurrentLoop({ projectPath: directionJudgeRoot, lastAssistantMessage: "done" });
+  check(
+    "fresh-context judge blocks direction-changing input without direction receipt",
+    missingDirectionJudge.verdict.verdict === "needs_research" && missingDirectionJudge.verdict.missingReceipts.includes(".solo/receipts/R/direction-change-receipt.json"),
+    missingDirectionJudge.verdict.reason,
+  );
+  const directionJudgePaths = directionPaths(directionJudgeRoot);
+  mkdirSync(dirname(directionJudgePaths.directionReceiptPath), { recursive: true });
+  writeFileSync(directionJudgePaths.directionReceiptPath, `${JSON.stringify(directionReceipt, null, 2)}\n`, "utf8");
+  writeSystemMapGraph(directionJudgePaths.systemMapPath, systemMap);
+  mkdirSync(dirname(directionJudgePaths.researchBriefPath), { recursive: true });
+  writeFileSync(directionJudgePaths.researchBriefPath.replace(/\.md$/, ".json"), `${JSON.stringify(researchBrief, null, 2)}\n`, "utf8");
+  const satisfiedDirectionJudge = judgeCurrentLoop({ projectPath: directionJudgeRoot, lastAssistantMessage: "done" });
+  check(
+    "fresh-context judge accepts completed direction layer and proceeds to normal receipts",
+    satisfiedDirectionJudge.judgeInput.directionLayer.ok === true && !satisfiedDirectionJudge.verdict.missingReceipts.includes(".solo/receipts/R/direction-change-receipt.json"),
+    satisfiedDirectionJudge.verdict.reason,
+  );
 
   console.log("\nComponentRalph (generic nested loop for compositional outputs):");
   const chairComponents = decomposeComponentsFromText({ text: "wooden chair from an image into a GLB asset", domain: "3d-generation" });

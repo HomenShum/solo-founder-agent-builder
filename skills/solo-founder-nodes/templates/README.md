@@ -25,6 +25,15 @@ npm run sfn -- context inspect <app-root>   # inspect Graphify-style graph conte
 npm run sfn -- control start --project <p> --goal <g> --budget 5 --root <app-root>
 npm run sfn -- control status <loopId>      # resume summary: phase, approvals, traces, improvements
 npm run sfn -- research init --goal <g> --domain 3d-generation --scope local-personal-research
+npm run sfn -- research classify --title "Khronos glTF" --url https://www.khronos.org/gltf/ --domain 3d-asset-pipeline
+npm run sfn -- research brief --goal "web-ready 3D asset pipeline" --domain 3d-asset-pipeline --project .
+npm run sfn -- direction intake --file founder-inspiration.txt --project .
+npm run sfn -- direction propose --goal "owned OSS interactive 3D asset pipeline" --project .
+npm run sfn -- direction decide --pivot pivot-001 --decision accepted --project .
+npm run sfn -- direction apply --pivot pivot-001 --project .
+npm run sfn -- graph init --goal "owned OSS interactive 3D asset pipeline" --project .
+npm run sfn -- graph validate --project .
+npm run sfn -- graph render --project . --out docs/system-map.md
 npm run sfn -- loop init --goal <g> --project <path>
 npm run sfn -- loop status --project <path>
 npm run sfn -- loop events --project <path>
@@ -101,8 +110,15 @@ npm run sfn -- ledger verify <runId>        # re-verify a run's hash-chain (tamp
   hooks use it to continue the loop instead of trusting chat memory.
 - **`dashboard/` - CLI command center**: renders the active loop, proof verdict, metrics, artifacts,
   recent events, runtime, and agent host policy from local receipts.
-- **`research/` - Research Spine**: research-backed decision receipts, claim gates, proof artifacts,
-  and 3D-agent comparison rubric.
+- **`research/` - Research Spine + Research Governor**: research-backed decision receipts, claim
+  gates, proof artifacts, source-tier classification, fresh research briefs, and 3D-agent comparison
+  rubric.
+- **`direction/` - Direction Change Protocol**: classifies direction-changing founder inspirations
+  into Adopt/Adapt/Park/Reject, writes Direction RALPH proposals, and produces the receipt required
+  before architecture-changing code claims continue.
+- **`architecture/` - Architecture Governor**: writes and validates `docs/system-map.graph.json` so
+  fresh coding agents can orient through UI, agent loop, research spine, proof registry, component
+  ledger, deployment, storage, and external systems.
 - **`loop/` - RALPH Loop Ledger + Loop Runner**: `.solo/loop-state.json`, `events.jsonl`, milestone
   receipt directories, start-anywhere gates, and executable phase receipts for discover -> benchmark ->
   setup -> build -> adapter -> verify -> iterate, with proof-verdict enforcement before rework.

@@ -166,6 +166,30 @@ final answer. Doctrine: [`references/idea-tweaks.md`](references/idea-tweaks.md)
 implementation: [`templates/tweaks/ideaTweak.ts`](templates/tweaks/ideaTweak.ts). Doctrine:
 **No silent scope creep; every tweak is implemented, deferred, or blocked with proof.**
 
+**Direction Change Protocol:** if the founder says "instead of," "make our own," "new pipeline,"
+"learn from this gold standard," "replace," "pivot," or otherwise changes the product, architecture,
+proof, or quality direction, do not treat it as a cheap tweak. Run
+`npm run sfn -- direction intake --file <text-or-screenshot-notes> --project .`,
+`npm run sfn -- direction propose --goal "<updated goal>" --project .`,
+`npm run sfn -- direction decide --pivot pivot-001 --decision accepted --project .`, and
+`npm run sfn -- direction apply --pivot pivot-001 --project .`. The receipt must classify each
+inspiration as Adopt/Adapt/Park/Reject, record old vs. new direction, target quality tier, invalidated
+receipts, new proof obligations, and the parent RALPH reroute. Direction RALPH is Reality,
+Acceptance, Live Build, Proof Run, Harden for the pivot itself. Doctrine:
+[`references/direction-change.md`](references/direction-change.md); copyable implementation:
+[`templates/direction/directionRalph.ts`](templates/direction/directionRalph.ts). Doctrine:
+**No direction receipt, no architecture-changing code claim.**
+
+**Architecture Governor:** direction or architecture-relevant changes require a canonical
+`docs/system-map.graph.json`. Initialize and verify with
+`npm run sfn -- graph init --goal "<goal>" --project .`,
+`npm run sfn -- graph validate --project .`, and optionally
+`npm run sfn -- graph render --project . --out docs/system-map.md`. The system map is the
+control-plane contract a fresh coding agent uses to orient itself around UI, agent loop, research
+spine, proof registry, component ledger, storage, deployment, model/runtime, and external systems.
+Doctrine: [`references/architecture-governor.md`](references/architecture-governor.md); copyable
+implementation: [`templates/architecture/architectureGovernor.ts`](templates/architecture/architectureGovernor.ts).
+
 **Component RALPH (nested proof for compositional outputs):** if the output is compositional, the
 agent must create `.solo/ledgers/component-ralph.json` with `npm run sfn -- component init --goal
 "<goal>" --domain <domain> --project .`, then prove each production-critical component through its
@@ -190,6 +214,15 @@ onward, fail closed if a major capability/result claim lacks proof artifacts. Un
 must be labeled `unsupported_assumption` or `rejected`, never sold as shipped capability. Doctrine:
 [`references/research-spine.md`](references/research-spine.md); copyable implementation:
 [`templates/research/`](templates/research/).
+
+**Research Governor:** for any research-backed implementation, classify sources and write a fresh
+research brief before the build decision is treated as grounded:
+`npm run sfn -- research classify --title "<title>" --url <url> --domain <domain>` and
+`npm run sfn -- research brief --goal "<goal>" --domain <domain> --project .`, then verify with
+`npm run sfn -- research verify <brief.json>`. Product inspirations are only product references; they
+must be Adopt/Adapt/Park/Reject classified and cannot prove implementation quality. Doctrine:
+[`references/research-governor.md`](references/research-governor.md); copyable implementation:
+[`templates/research/researchGovernor.ts`](templates/research/researchGovernor.ts).
 
 **3D founder scenario:** for picture/text/video/reference-media-to-3D requests, default to a
 first-party plan: reference-media intake + rights/provenance gate -> first-principles component

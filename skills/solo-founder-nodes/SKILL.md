@@ -28,6 +28,12 @@ playbook in [`nodes/`](nodes/) (`1-discover.md` … `7-iterate.md`) when you ent
 by build + verify for the UI so in-app transfer is achievable — detail lives in `MASTER_SKILL.md` +
 `nodes/`.
 
+Direction-changing inspiration is handled by the portable Direction Change Protocol, Architecture
+Governor, and Research Governor, not by silent scope creep; see
+[`references/direction-change.md`](references/direction-change.md),
+[`references/architecture-governor.md`](references/architecture-governor.md), and
+[`references/research-governor.md`](references/research-governor.md).
+
 > `SKILL.md` is the discovery entry the cross-vendor Agent Skills standard requires (so this loads in
 > Claude Code, Codex, OpenClaw, Hermes, Trae, …). `MASTER_SKILL.md` holds the full master directive.
 

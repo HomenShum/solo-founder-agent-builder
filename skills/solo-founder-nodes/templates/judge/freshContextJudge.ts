@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import {
   loadRalphLoop,
   ralphPaths,
@@ -10,6 +10,13 @@ import {
 import { readSoloEventLog } from "../events/soloEventBus";
 import { judgeComponentLayer, type ComponentJudgeVerdict } from "../component-ralph/componentJudge";
 import { readComponentRalphLedger } from "../component-ralph/componentRalphRunner";
+import {
+  directionChangedByText,
+  directionPaths,
+  readDirectionChangeReceipt,
+  verifyDirectionChangeReceipt,
+} from "../direction/directionRalph";
+import { readSystemMapGraph, validateSystemMapGraph } from "../architecture/architectureGovernor";
 
 export type FreshContextJudgeVerdictKind =
   | "done"
@@ -36,6 +43,13 @@ export type FreshContextJudgeInput = {
     required: boolean;
     ok: boolean;
     status: ComponentJudgeVerdict["status"];
+    reason: string;
+    missingProofs: string[];
+  };
+  directionLayer: {
+    required: boolean;
+    exists: boolean;
+    ok: boolean;
     reason: string;
     missingProofs: string[];
   };
@@ -80,7 +94,13 @@ export function makeFreshContextJudgeInput(input: {
   }
 
   const proofVerdict = readProofVerdict(projectPath);
+  const recentEvents = readSoloEventLog(projectPath, input.eventLimit ?? 20);
   const componentLayer = readComponentLayer(projectPath, loop);
+  const directionLayer = readDirectionLayer(projectPath, {
+    initialUserGoal: input.initialUserGoal,
+    lastAssistantMessage: input.lastAssistantMessage,
+    recentEvents,
+  });
   return {
     schemaVersion: 1,
     projectPath,
@@ -88,9 +108,10 @@ export function makeFreshContextJudgeInput(input: {
     currentMilestone,
     loop,
     missingReceipts,
-    recentEvents: readSoloEventLog(projectPath, input.eventLimit ?? 20),
+    recentEvents,
     proofVerdict,
     componentLayer,
+    directionLayer,
     lastAssistantMessage: input.lastAssistantMessage,
   };
 }
@@ -137,6 +158,38 @@ export function deterministicFreshContextJudge(input: FreshContextJudgeInput): F
           kind: "command",
           command: blocker?.nextAction ?? `npm run sfn -- loop start --from ${current} --project .`,
           description: blocker?.nextAction ?? "Resume the current blocked milestone.",
+        },
+      ],
+    });
+  }
+
+  if ((input.directionLayer.required || input.directionLayer.exists) && input.directionLayer.ok !== true) {
+    return verdict({
+      kind: "needs_research",
+      confidence: 0.98,
+      currentMilestone: current,
+      reason: input.directionLayer.reason,
+      missingReceipts: input.directionLayer.missingProofs,
+      actions: [
+        {
+          kind: "command",
+          command: 'npm run sfn -- direction intake --file <inspiration-or-user-message> --project .',
+          description: "Classify the direction-changing input before editing further.",
+        },
+        {
+          kind: "command",
+          command: 'npm run sfn -- direction propose --goal "<updated goal>" --project .',
+          description: "Write the Direction RALPH proposal with old/new direction and proof obligations.",
+        },
+        {
+          kind: "command",
+          command: "npm run sfn -- direction decide --pivot pivot-001 --decision accepted --project .",
+          description: "Record the user-level Adopt/Adapt/Park/Reject decision.",
+        },
+        {
+          kind: "command",
+          command: "npm run sfn -- direction apply --pivot pivot-001 --project .",
+          description: "Write the direction-change receipt and reroute the parent loop.",
         },
       ],
     });
@@ -259,6 +312,64 @@ function verdict(input: {
     shouldRunVerification: input.kind === "needs_verification",
     blockClaim: true,
   };
+}
+
+function readDirectionLayer(projectPath: string, input: {
+  initialUserGoal?: string;
+  lastAssistantMessage?: string;
+  recentEvents: Array<Record<string, unknown>>;
+}): FreshContextJudgeInput["directionLayer"] {
+  const text = [
+    input.initialUserGoal,
+    input.lastAssistantMessage,
+    ...input.recentEvents.map((event) => [
+      event.event,
+      event.message,
+      event.command,
+      event.receiptPath,
+    ].filter(Boolean).join(" ")),
+  ].filter(Boolean).join("\n");
+  const required = directionChangedByText(text);
+  const receipt = readDirectionChangeReceipt(projectPath);
+  const exists = !!receipt;
+  const missingProofs: string[] = [];
+  if (required && !receipt) missingProofs.push(".solo/receipts/R/direction-change-receipt.json");
+  const receiptVerdict = receipt ? verifyDirectionChangeReceipt(receipt) : { ok: !required, errors: [] as string[] };
+  for (const error of receiptVerdict.errors) missingProofs.push(`direction-receipt:${error}`);
+
+  const paths = directionPaths(projectPath, receipt?.pivotId ?? "pivot-001");
+  const systemMapOk = readSystemMapVerdict(paths.systemMapPath);
+  if ((required || exists) && !systemMapOk.ok) missingProofs.push("docs/system-map.graph.json");
+  const researchBriefOk = [
+    paths.researchBriefPath,
+    paths.researchBriefPath.replace(/\.md$/, ".json"),
+    join(projectPath, "docs", "research", "briefs", "3d-asset-pipeline-brief.json"),
+    join(projectPath, "docs", "research", "briefs", "generic-product-brief.json"),
+    join(projectPath, "docs", "research", "briefs", "direction-change.json"),
+  ].some((path) => existsSync(path));
+  if ((required || exists) && !researchBriefOk) missingProofs.push("docs/research/briefs/direction-change.{md,json}");
+
+  const ok = (!required && !exists) || (exists && receiptVerdict.ok && systemMapOk.ok && researchBriefOk);
+  return {
+    required,
+    exists,
+    ok,
+    reason: ok
+      ? "Direction layer is satisfied or not required."
+      : required
+        ? "Direction-changing input requires Direction RALPH, Research Governor, and Architecture Governor receipts before completion claims count."
+        : "A direction receipt exists but its dependent research or architecture receipts are incomplete.",
+    missingProofs: [...new Set(missingProofs)],
+  };
+}
+
+function readSystemMapVerdict(path: string) {
+  if (!existsSync(path)) return { ok: false };
+  try {
+    return validateSystemMapGraph(readSystemMapGraph(path));
+  } catch {
+    return { ok: false };
+  }
 }
 
 function readComponentLayer(projectPath: string, loop?: SoloLoopRun): FreshContextJudgeInput["componentLayer"] {

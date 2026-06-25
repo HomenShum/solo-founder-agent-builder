@@ -12,6 +12,8 @@ Every target repo should converge on these local files:
 - `.solo/events.jsonl` - normalized `SoloEvent` stream from host hooks and CLI commands.
 - `.solo/memory.db` - safe project memory and recall, never held-out gold.
 - `.solo/receipts/` - milestone receipts.
+- `.solo/direction/` and `.solo/receipts/R/direction-change-receipt.json` - direction-changing
+  inspiration classification, decision, impact, and reroute receipt.
 - `.solo/ledgers/component-ralph.json` - nested component receipts for compositional products.
 - `.solo/proof-verdict.json` - the proof pass/fail boundary.
 - `.solo/rework-ledger.md` - what was replaced, why, and what evidence survived.
@@ -30,7 +32,8 @@ npm run sfn -- hooks install --target trae --mode generic-until-verified --proje
 The installer emits these shared scripts:
 
 - `.solo/bin/sfn-pre-tool-policy.js` records pre-tool events and blocks destructive/publish commands
-  until explicitly approved.
+  until explicitly approved. It also blocks ordinary code writes when direction-changing input is
+  present in `.solo/events.jsonl` but no direction-change receipt exists.
 - `.solo/bin/sfn-post-tool-receipt.js` records post-tool and receipt events.
 - `.solo/bin/sfn-session-idle-judge.js` records idle events and calls `sfn judge current --on-stop`.
 - `.solo/bin/sfn-final-answer-guard.js` calls the same judge before final-answer claims.
@@ -58,10 +61,13 @@ npm run sfn -- judge current --project . --on-stop
 ```
 
 The judge reads only durable evidence: loop state, RALPH required receipts, recent events,
-component-ledger status for compositional outputs, and proof-verdict state. It returns:
+direction-change receipts, system-map/research-brief state, component-ledger status for compositional
+outputs, and proof-verdict state. It returns:
 
 - `done` only when the whole RALPH loop is complete.
 - `needs_research` when discover/research receipts are missing.
+- `needs_research` when direction-changing input requires Direction RALPH, Research Governor, and
+  Architecture Governor receipts.
 - `needs_verification` when proof receipts or `proof-verdict.json` are missing/failing.
 - `not_done` when a milestone is locally satisfied but the whole loop has not completed, or when a
   compositional parent `L/P/H` claim is missing Component RALPH proofs.

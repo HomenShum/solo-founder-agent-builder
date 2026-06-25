@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Solo Founder Direction Impact",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "pivotId",
+    "status",
+    "oldDirection",
+    "newDirection",
+    "affectedMilestones",
+    "invalidatedReceipts",
+    "newRequiredReceipts",
+    "decision"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "pivotId": { "type": "string" },
+    "status": { "enum": ["accepted", "parked", "rejected"] },
+    "oldDirection": { "type": "string" },
+    "newDirection": { "type": "string" },
+    "affectedMilestones": {
+      "type": "array",
+      "items": { "enum": ["R", "A", "L", "P", "H"] }
+    },
+    "invalidatedReceipts": { "type": "array", "items": { "type": "string" } },
+    "newRequiredReceipts": { "type": "array", "items": { "type": "string" } },
+    "decision": { "type": "string" }
+  }
+}

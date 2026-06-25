@@ -33,7 +33,7 @@ ok("4 non-negotiables present", nn.every((n) => M.includes(n)), nn.filter((n) =>
 const nodes = ["1-discover", "2-benchmark", "3-setup", "4-build", "5-adapter", "6-verify", "7-iterate"];
 ok("7 node playbooks present", nodes.every((n) => existsSync(join(skill, "nodes", `${n}.md`))));
 ok("phase order is verify then iterate", /adapter\s*\|\s*wire[\s\S]*\|\s*6\s*\|\s*verify[\s\S]*\|\s*7\s*\|\s*iterate/i.test(master));
-const refs = ["honest-lane", "memory", "context-substrate", "control-plane", "cli-command-center", "host-hooks-fresh-judge", "design-bridge", "agent-chat-ux", "gstack-bridge", "benchmarks", "research", "research-spine", "intent-ralph", "idea-tweaks", "component-ralph", "industry-3d-assets", "part-research-ralph"];
+const refs = ["honest-lane", "memory", "context-substrate", "control-plane", "cli-command-center", "host-hooks-fresh-judge", "design-bridge", "agent-chat-ux", "gstack-bridge", "benchmarks", "research", "research-spine", "research-governor", "architecture-governor", "direction-change", "intent-ralph", "idea-tweaks", "component-ralph", "industry-3d-assets", "part-research-ralph"];
 ok("references present", refs.every((r) => existsSync(join(skill, "references", `${r}.md`))));
 
 // 4. Runnable substrate files present (Node + the smoke).
@@ -64,6 +64,17 @@ ok("templates substrate present", [
   "engineering/firstPrinciplesDeconstructionReceipt.ts",
   "trust/trustRoot.ts",
   "research/researchSpine.ts",
+  "research/researchGovernor.ts",
+  "research/research-policy.yaml",
+  "direction/directionRalph.ts",
+  "direction/direction-intake.md",
+  "direction/direction-proposal.schema.json",
+  "direction/direction-decision.md",
+  "direction/direction-impact.schema.json",
+  "architecture/architectureGovernor.ts",
+  "architecture/system-map.graph.schema.json",
+  "architecture/render-system-map.ts",
+  "architecture/arch-guard.ts",
   "design/designSkillBridge.ts",
   "design/designQualityGate.ts",
   "design/agentChatUxGate.ts",
@@ -75,6 +86,9 @@ ok("fresh-context judge and host hooks directive present", /Fresh-context judge/
 ok("external setup gate directive present", /External setup gate/i.test(master) && /deterministic prework/i.test(master) && /server-side secret/i.test(master));
 ok("optional agent host setup directive present", /Optional agent host setup/i.test(master) && /agents openrouter-plan/i.test(master) && /OpenRouter model catalog/i.test(master));
 ok("research-backed implementation directive present", /research-spine/i.test(master) && /research-backed implementation/i.test(master));
+ok("research governor directive present", /Research Governor/i.test(master) && /research brief/i.test(master));
+ok("architecture governor directive present", /Architecture Governor/i.test(master) && /system-map\.graph\.json/i.test(master));
+ok("direction change protocol directive present", /Direction Change/i.test(master) && /direction intake/i.test(master) && /direction apply/i.test(master));
 ok("design skill portability directive present", /design skills are portable inputs/i.test(master) && /designSkillBridge/i.test(master) && /design flow/i.test(master));
 ok("design quality gate directive present", /design quality gate/i.test(master) && /best\s+UI\/UX/i.test(master) && /browser screenshots/i.test(master));
 ok("agent chat UX gate directive present", /Agent chat UX gate/i.test(master) && /agentChatUxGate/i.test(master) && /chat-ux verify/i.test(master));
