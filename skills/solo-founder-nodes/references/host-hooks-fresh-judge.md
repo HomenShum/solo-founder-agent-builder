@@ -15,6 +15,7 @@ Every target repo should converge on these local files:
 - `.solo/direction/` and `.solo/receipts/R/direction-change-receipt.json` - direction-changing
   inspiration classification, decision, impact, and reroute receipt.
 - `.solo/ledgers/component-ralph.json` - nested component receipts for compositional products.
+- `.solo/ledgers/assembly-coherence.json` - subassembly/interface proof for compositional products.
 - `.solo/prometheus/current-run.json` and `.solo/prometheus/runs/<run>/run.json` - versioned
   engineering loop state, per-version proof gates, comparison, and improvement plans.
 - `.solo/proof-verdict.json` - the proof pass/fail boundary.
@@ -64,7 +65,8 @@ npm run sfn -- judge current --project . --on-stop
 
 The judge reads only durable evidence: loop state, RALPH required receipts, recent events,
 direction-change receipts, system-map/research-brief state, component-ledger status for compositional
-outputs, Prometheus version state, and proof-verdict state. It returns:
+outputs, assembly/interface coherence status for composed artifacts, Prometheus version state, and
+proof-verdict state. It returns:
 
 - `done` only when the whole RALPH loop is complete.
 - `needs_research` when discover/research receipts are missing.
@@ -72,8 +74,8 @@ outputs, Prometheus version state, and proof-verdict state. It returns:
   Architecture Governor receipts.
 - `needs_verification` when proof receipts or `proof-verdict.json` are missing/failing.
 - `not_done` when a milestone is locally satisfied but the whole loop has not completed, or when a
-  compositional parent `L/P/H` claim is missing Component RALPH proofs, or when an active Prometheus
-  run's latest version has not passed.
+  compositional parent `L/P/H` claim is missing Component RALPH proofs, missing Assembly Coherence
+  interface proofs, or when an active Prometheus run's latest version has not passed.
 - `blocked` when there is no loop save file or an explicit blocker exists.
 
 Final-answer hooks should block when `blockClaim: true`. That is how the skill forces a coding agent
@@ -84,6 +86,7 @@ For compositional products, run:
 
 ```bash
 npm run sfn -- component proof --all --project .
+npm run sfn -- assembly verify --receipt .solo/ledgers/assembly-coherence.json --base .
 ```
 
-The clean rule is: no component proof, no parent claim.
+The clean rule is: no component proof, no assembly/interface proof, no parent claim.

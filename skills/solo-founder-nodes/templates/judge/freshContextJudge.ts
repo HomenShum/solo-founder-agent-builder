@@ -18,6 +18,10 @@ import {
 } from "../direction/directionRalph";
 import { readSystemMapGraph, validateSystemMapGraph } from "../architecture/architectureGovernor";
 import { readPrometheusRun, verifyPrometheusRun } from "../prometheus/prometheusMode";
+import {
+  readAssemblyCoherenceReceipt,
+  verifyAssemblyCoherenceReceipt,
+} from "../assembly/assemblyCoherence";
 
 export type FreshContextJudgeVerdictKind =
   | "done"
@@ -44,6 +48,13 @@ export type FreshContextJudgeInput = {
     required: boolean;
     ok: boolean;
     status: ComponentJudgeVerdict["status"];
+    reason: string;
+    missingProofs: string[];
+  };
+  assemblyLayer: {
+    exists: boolean;
+    required: boolean;
+    ok: boolean;
     reason: string;
     missingProofs: string[];
   };
@@ -106,6 +117,7 @@ export function makeFreshContextJudgeInput(input: {
   const proofVerdict = readProofVerdict(projectPath);
   const recentEvents = readSoloEventLog(projectPath, input.eventLimit ?? 20);
   const componentLayer = readComponentLayer(projectPath, loop);
+  const assemblyLayer = readAssemblyLayer(projectPath, loop, componentLayer.required);
   const directionLayer = readDirectionLayer(projectPath, {
     initialUserGoal: input.initialUserGoal,
     lastAssistantMessage: input.lastAssistantMessage,
@@ -122,6 +134,7 @@ export function makeFreshContextJudgeInput(input: {
     recentEvents,
     proofVerdict,
     componentLayer,
+    assemblyLayer,
     directionLayer,
     prometheusLayer,
     lastAssistantMessage: input.lastAssistantMessage,
@@ -258,6 +271,25 @@ export function deterministicFreshContextJudge(input: FreshContextJudgeInput): F
             ? "npm run sfn -- component proof --all --project ."
             : 'npm run sfn -- component init --domain <domain> --goal "<goal>" --project .',
           description: "Complete required nested Component RALPH proofs before claiming the parent loop is done.",
+        },
+      ],
+    });
+  }
+
+  if (["L", "P", "H"].includes(current) && input.assemblyLayer.required && input.assemblyLayer.ok !== true) {
+    return verdict({
+      kind: "not_done",
+      confidence: 0.97,
+      currentMilestone: current,
+      reason: input.assemblyLayer.reason,
+      missingReceipts: input.assemblyLayer.missingProofs,
+      actions: [
+        {
+          kind: "command",
+          command: input.assemblyLayer.exists
+            ? "npm run sfn -- assembly verify --receipt .solo/ledgers/assembly-coherence.json --base ."
+            : 'npm run sfn -- assembly init --domain <domain> --goal "<goal>" --completed --project .',
+          description: "Complete required subassembly/interface proofs before claiming the composed parent artifact is done.",
         },
       ],
     });
@@ -422,6 +454,40 @@ function readComponentLayer(projectPath: string, loop?: SoloLoopRun): FreshConte
     status: result.status,
     reason: result.reason,
     missingProofs: result.missingProofs,
+  };
+}
+
+function readAssemblyLayer(
+  projectPath: string,
+  loop: SoloLoopRun | undefined,
+  componentLayerRequired: boolean,
+): FreshContextJudgeInput["assemblyLayer"] {
+  const receipt = readAssemblyCoherenceReceipt(projectPath);
+  const required = componentLayerRequired || /3d|mesh|model|asset|gltf|glb|dashboard|ui|agent|workflow|pipeline|simulation/i.test(loop?.goal ?? "");
+  if (!receipt) {
+    return {
+      exists: false,
+      required,
+      ok: !required,
+      reason: required
+        ? "A compositional parent claim needs an assembly coherence ledger; flat Component RALPH proof is not enough."
+        : "Assembly coherence layer is not required for this goal.",
+      missingProofs: required ? [".solo/ledgers/assembly-coherence.json"] : [],
+    };
+  }
+  const verdict = verifyAssemblyCoherenceReceipt(receipt, {
+    baseDir: projectPath,
+    requireFiles: true,
+    requireCompleted: true,
+  });
+  return {
+    exists: true,
+    required,
+    ok: verdict.ok,
+    reason: verdict.ok
+      ? "Assembly coherence layer is satisfied."
+      : "Assembly coherence is incomplete: subassembly interfaces, no-floating proof, or evidence files are missing.",
+    missingProofs: verdict.missingProofs,
   };
 }
 

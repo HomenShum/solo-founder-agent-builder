@@ -104,6 +104,15 @@ do decompose parts that affect user value, exported artifacts, external standard
 risk. Spec: [`references/component-ralph.md`](references/component-ralph.md); implementation:
 [`templates/component-ralph/`](templates/component-ralph/). Doctrine: no component proof, no parent claim.
 
+**Assembly Coherence:** Component RALPH is not enough for a composed artifact. After component proof,
+run `npm run sfn -- assembly init --goal "<goal>" --domain <domain> --project .` and
+`npm run sfn -- assembly verify --receipt .solo/ledgers/assembly-coherence.json --base .`.
+This proves subassemblies, interface continuity, no-floating/no-orphan checks, and export/runtime
+binding before any professional workflow or whole-product claim. Spec:
+[`references/assembly-coherence.md`](references/assembly-coherence.md); implementation:
+[`templates/assembly/assemblyCoherence.ts`](templates/assembly/assemblyCoherence.ts). Doctrine:
+no assembly/interface proof, no professional workflow claim.
+
 **Prometheus Mode:** when the user wants the agent to keep improving a product over attempts, run
 `npm run sfn -- prometheus init --goal "<goal>" --target <domain> --project .`, then
 `npm run sfn -- prometheus run --goal "<goal>" --iterations <n> --record --project .`, then

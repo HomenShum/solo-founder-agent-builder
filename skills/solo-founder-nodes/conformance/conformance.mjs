@@ -33,7 +33,7 @@ ok("4 non-negotiables present", nn.every((n) => M.includes(n)), nn.filter((n) =>
 const nodes = ["1-discover", "2-benchmark", "3-setup", "4-build", "5-adapter", "6-verify", "7-iterate"];
 ok("7 node playbooks present", nodes.every((n) => existsSync(join(skill, "nodes", `${n}.md`))));
 ok("phase order is verify then iterate", /adapter\s*\|\s*wire[\s\S]*\|\s*6\s*\|\s*verify[\s\S]*\|\s*7\s*\|\s*iterate/i.test(master));
-const refs = ["honest-lane", "memory", "context-substrate", "control-plane", "cli-command-center", "host-hooks-fresh-judge", "design-bridge", "agent-chat-ux", "gstack-bridge", "benchmarks", "research", "research-spine", "research-governor", "architecture-governor", "direction-change", "intent-ralph", "idea-tweaks", "component-ralph", "prometheus-mode", "industry-3d-assets", "part-research-ralph"];
+const refs = ["honest-lane", "memory", "context-substrate", "control-plane", "cli-command-center", "host-hooks-fresh-judge", "design-bridge", "agent-chat-ux", "gstack-bridge", "benchmarks", "research", "research-spine", "research-governor", "architecture-governor", "direction-change", "intent-ralph", "idea-tweaks", "component-ralph", "assembly-coherence", "prometheus-mode", "industry-3d-assets", "part-research-ralph"];
 ok("references present", refs.every((r) => existsSync(join(skill, "references", `${r}.md`))));
 
 // 4. Runnable substrate files present (Node + the smoke).
@@ -51,6 +51,7 @@ ok("templates substrate present", [
   "tweaks/ideaTweak.ts",
   "component-ralph/componentRalphRunner.ts",
   "component-ralph/componentJudge.ts",
+  "assembly/assemblyCoherence.ts",
   "prometheus/prometheusMode.ts",
   "prometheus/prometheus-run.schema.json",
   "prometheus/version.schema.json",
@@ -104,6 +105,7 @@ ok("nested phase RALPH directive present", /Nested phase RALPH/i.test(master) &&
 ok("generic intent RALPH directive present", /Intent RALPH/i.test(master) && /intent ralph-plan/i.test(master) && /intentRalph/i.test(master));
 ok("idea tweak directive present", /Idea tweaks/i.test(master) && /tweak intake/i.test(master) && /ideaTweak/i.test(master));
 ok("generic component RALPH directive present", /Component RALPH/i.test(master) && /component proof --all/i.test(master) && /No component proof, no parent claim/i.test(master));
+ok("assembly coherence directive present", /Assembly Coherence/i.test(master) && /assembly verify/i.test(master) && /No assembly\/interface proof/i.test(master));
 ok("Prometheus Mode directive present", /Prometheus Mode/i.test(master) && /prometheus run/i.test(master) && /Every version needs proof/i.test(master));
 ok("3D/fresh-user/trust proof directives present", /3D founder scenario/i.test(master) && /fresh-user/i.test(master) && /trust verify/i.test(master));
 ok("industry-grade 3D asset quality gate directive present", /3D asset quality gate/i.test(master) && /3d quality-plan/i.test(master) && /assetQualityGate/i.test(master));

@@ -147,6 +147,16 @@ import {
   type ComponentRalphStage,
   type ComponentRalphStageStatus,
 } from "../component-ralph/componentRalphRunner";
+import {
+  assemblyCoherencePath,
+  makeAssemblyCoherenceReceipt,
+  readAssemblyCoherenceReceipt,
+  verifyAssemblyCoherenceReceipt,
+  type AssemblyComponentInput,
+  type AssemblyCoherenceReceipt,
+  type AssemblyInterfaceInput,
+  type AssemblyInterfaceStatus,
+} from "../assembly/assemblyCoherence";
 import { judgeComponentLayer } from "../component-ralph/componentJudge";
 import {
   appendPrometheusVersion,
@@ -435,6 +445,13 @@ function parseComponentStageStatus(value?: string): ComponentRalphStageStatus {
   throw new Error(`unsupported component RALPH status '${status}' (expected one of: ${allowed.join(", ")})`);
 }
 
+function parseAssemblyStatus(value?: string): AssemblyInterfaceStatus {
+  const status = value ?? "planned";
+  const allowed: AssemblyInterfaceStatus[] = ["planned", "pass", "partial", "blocked"];
+  if (allowed.includes(status as AssemblyInterfaceStatus)) return status as AssemblyInterfaceStatus;
+  throw new Error(`unsupported assembly status '${status}' (expected one of: ${allowed.join(", ")})`);
+}
+
 function parsePrometheusTarget(value: string | undefined, goal = ""): PrometheusTarget {
   if (!value) return inferPrometheusTarget(goal);
   if (prometheusTargets.includes(value as PrometheusTarget)) return value as PrometheusTarget;
@@ -566,6 +583,9 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   component run --id <component-id> --phase <R|A|L|P|H> [--receipt <path>] [--status planned|running|completed|blocked] [--project <path>] [--ledger <file>]
   component judge [--id <component-id>] [--project <path>] [--ledger <file>] [--goal <g>] [--no-files]
   component proof --all [--project <path>] [--ledger <file>] [--goal <g>] [--no-files]
+  assembly init --goal <g> [--domain <d>] [--components <file>] [--interfaces <file>] [--completed] [--project <path>] [--out <file>]
+  assembly verify --receipt <file> [--base <dir>] [--no-files]
+  assembly status [--project <path>] [--receipt <file>]
   prometheus init --goal <g> [--target <domain>] [--iterations <n>] [--project <path>] [--run-id <id>]
   prometheus run --goal <g> [--target <domain>] [--iterations <n>] [--project <path>] [--record]
   prometheus status [--project <path>] [--run <id>]
@@ -1772,6 +1792,51 @@ async function main() {
         process.exit(verdict.ok ? 0 : 1);
       }
       console.error("component: init | decompose | status | run | judge | proof");
+      process.exit(2);
+    }
+    case "assembly": {
+      const sub = rest[0];
+      const projectPath = resolve(flag(rest, "--project", ".")!);
+      const receiptPath = flag(rest, "--receipt")
+        ? resolve(flag(rest, "--receipt")!)
+        : assemblyCoherencePath(projectPath);
+      if (sub === "init") {
+        const goal = flag(rest, "--goal");
+        if (!goal) {
+          console.error("assembly init --goal <g> [--domain <d>] [--components <file>] [--interfaces <file>] [--completed] [--project <path>] [--out <file>]");
+          process.exit(2);
+        }
+        const componentsPath = flag(rest, "--components");
+        const interfacesPath = flag(rest, "--interfaces");
+        const components = componentsPath ? readJson<AssemblyComponentInput[]>(resolve(componentsPath)) : undefined;
+        const interfaces = interfacesPath ? readJson<AssemblyInterfaceInput[]>(resolve(interfacesPath)) : undefined;
+        const receipt = makeAssemblyCoherenceReceipt({
+          goal,
+          domain: flag(rest, "--domain", "general"),
+          components,
+          interfaces,
+          status: parseAssemblyStatus(rest.includes("--completed") ? "pass" : flag(rest, "--status", "planned")),
+        });
+        const target = flag(rest, "--out") ? resolve(flag(rest, "--out")!) : receiptPath;
+        writeJson(target, receipt);
+        console.log(JSON.stringify({ out: target, receipt, verdict: verifyAssemblyCoherenceReceipt(receipt, { baseDir: projectPath, requireFiles: false, requireCompleted: !rest.includes("--planned-ok") }) }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "verify" || sub === "status") {
+        if (!existsSync(receiptPath)) {
+          console.error("assembly verify --receipt <file> [--base <dir>] [--no-files]");
+          process.exit(2);
+        }
+        const receipt = readJson<AssemblyCoherenceReceipt>(receiptPath);
+        const verdict = verifyAssemblyCoherenceReceipt(receipt, {
+          baseDir: flag(rest, "--base") ? resolve(flag(rest, "--base")!) : dirname(receiptPath),
+          requireFiles: !rest.includes("--no-files"),
+          requireCompleted: !rest.includes("--planned-ok"),
+        });
+        console.log(JSON.stringify({ receipt: receiptPath, verdict }, jbig, 2));
+        process.exit(verdict.ok ? 0 : 1);
+      }
+      console.error("assembly: init | verify | status");
       process.exit(2);
     }
     case "prometheus": {

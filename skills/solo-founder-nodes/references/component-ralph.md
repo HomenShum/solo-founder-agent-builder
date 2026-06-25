@@ -31,6 +31,23 @@ Each required component has its own `R/A/L/P/H` receipts:
 
 Parent proof is blocked when a required component is missing any completed stage or required proof gate.
 
+## Assembly Coherence Boundary
+
+Component RALPH proves production-critical parts. It does not prove that those parts compose into a
+professional workflow or artifact. After component proof, run:
+
+```bash
+npm run sfn -- assembly init --goal "<goal>" --domain <domain> --project .
+npm run sfn -- assembly verify --receipt .solo/ledgers/assembly-coherence.json --base .
+```
+
+Assembly Coherence must name subassemblies, required interfaces, no-floating/no-orphan checks, and
+export/runtime/proof binding. This is the gate that catches failures such as a 3D model with named
+hinges and arms that are not actually attached, or a dashboard whose filter, chart, and export do not
+share state.
+
+Clean rule: no assembly/interface proof, no professional workflow claim.
+
 ## 3D Adapter
 
 The 3D part-research RALPH adapter remains domain-specific. It uses Component RALPH as the parent contract, then adds 3D-specific gates for part graph, geometry, topology, UV/PBR material, GLB/glTF export, viewer interaction, DCC/reopen proof when configured, provider/comparator receipts, and proof runner evidence.

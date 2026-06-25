@@ -203,6 +203,18 @@ missing or any required child proof is incomplete. Use `npm run sfn -- component
 copyable implementation: [`templates/component-ralph/`](templates/component-ralph/). Doctrine:
 **No component proof, no parent claim.**
 
+**Assembly Coherence Governor (interfaces after components):** Component RALPH can still produce a
+nonsense parent artifact if proven parts do not attach, hand off state, export together, or survive
+the live proof as one composed system. After Component RALPH, run
+`npm run sfn -- assembly init --goal "<goal>" --domain <domain> --project .` and
+`npm run sfn -- assembly verify --receipt .solo/ledgers/assembly-coherence.json --base .`.
+The receipt must name subassemblies, required interfaces, evidence paths, no-floating/no-orphan
+checks, and export/runtime/proof binding. The fresh-context judge blocks parent `L/P/H` claims for
+compositional goals when the assembly ledger is missing or incomplete. Doctrine:
+[`references/assembly-coherence.md`](references/assembly-coherence.md); copyable implementation:
+[`templates/assembly/assemblyCoherence.ts`](templates/assembly/assemblyCoherence.ts). Doctrine:
+**No assembly/interface proof, no professional workflow claim.**
+
 **Prometheus Mode (versioned engineering loop):** when the user wants a product to improve over
 attempts, or when the proof story is "watch the artifact get better," wrap the parent RALPH loop in
 Prometheus Mode:

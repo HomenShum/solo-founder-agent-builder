@@ -61,6 +61,10 @@ import {
   markComponentStage,
   verifyComponentRalphLedger,
 } from "./component-ralph/componentRalphRunner";
+import {
+  makeAssemblyCoherenceReceipt,
+  verifyAssemblyCoherenceReceipt,
+} from "./assembly/assemblyCoherence";
 import { judgeComponentLayer } from "./component-ralph/componentJudge";
 import {
   appendPrometheusVersion,
@@ -983,6 +987,33 @@ async function main() {
   check("component RALPH rejects incomplete required proof gates", missingGateVerdict.ok === false && missingGateVerdict.missingProofs.some((proof) => proof.includes("proofGate")));
   const noLedgerJudge = judgeComponentLayer({ projectPath: proofRoot, goal: "prove a coherent 3D asset pipeline" });
   check("component judge blocks missing ledger for compositional parent proof", noLedgerJudge.ok === false && noLedgerJudge.missingProofs.includes(".solo/ledgers/component-ralph.json"));
+
+  console.log("\nAssemblyCoherence (generic subassembly/interface gate):");
+  const assemblyReceipt = makeAssemblyCoherenceReceipt({
+    goal: "Generate a coherent eyewear-style 3D asset from screenshot inspiration.",
+    domain: "3d-generation",
+    generatedAt: "2026-06-24T00:00:00.000Z",
+    status: "pass",
+  });
+  for (const edge of assemblyReceipt.interfaces) {
+    for (const evidencePath of edge.evidencePaths) {
+      touch(evidencePath, `{"interfaceId":"${edge.id}","status":"pass"}\n`);
+    }
+  }
+  const assemblyVerdict = verifyAssemblyCoherenceReceipt(assemblyReceipt, { baseDir: proofRoot });
+  check(
+    "assembly coherence passes complete subassembly/interface/no-floating proof",
+    assemblyVerdict.ok && assemblyReceipt.interfaces.some((edge) => edge.kind === "non-floating"),
+    assemblyVerdict.errors.join("; "),
+  );
+  const missingAssemblyStatus = clone(assemblyReceipt);
+  missingAssemblyStatus.interfaces[0].status = "planned";
+  const missingAssemblyVerdict = verifyAssemblyCoherenceReceipt(missingAssemblyStatus, { baseDir: proofRoot });
+  check("assembly coherence rejects incomplete required interface", missingAssemblyVerdict.ok === false && missingAssemblyVerdict.missingProofs.some((proof) => proof.includes("assembly.interface")));
+  const noFloatingGateReceipt = clone(assemblyReceipt);
+  noFloatingGateReceipt.interfaces = noFloatingGateReceipt.interfaces.filter((edge) => edge.kind !== "non-floating");
+  const noFloatingGateVerdict = verifyAssemblyCoherenceReceipt(noFloatingGateReceipt, { baseDir: proofRoot });
+  check("assembly coherence rejects missing no-floating/no-orphan gate", noFloatingGateVerdict.ok === false && noFloatingGateVerdict.missingProofs.includes("assembly.interface:no-floating"));
 
   console.log("\nPrometheusMode (versioned engineering loop over artifact attempts):");
   check("prometheus targets cover non-3D domains", prometheusTargets.includes("finance-workflow") && prometheusTargets.includes("agent-app"));
