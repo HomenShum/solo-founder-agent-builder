@@ -16,6 +16,7 @@ import {
   makeAgentRunReceipt,
   makeHookInstallPlan,
   readSoloEventLog,
+  readSoloEvents,
   recordSoloEvent,
   writeHookInstallPlan,
   type HookInstallMode,
@@ -274,6 +275,27 @@ import type { RememberInput } from "../memory/types";
 import { verifyAgentReadyToolContract, type AgentReadyToolContract } from "../agentApi/agentReadyApi";
 import { verifyFreshRoomProofReceipt, type FreshRoomProofReceipt } from "../proof/freshRoomReceipt";
 import { makeReworkLedger, verifyReworkLedger, type ReworkLedger, type ReworkLedgerEntry } from "../rework/reworkLedger";
+import {
+  consumeFailureEvents,
+  readReflexIncident,
+  readReflexIncidents,
+  reflexPaths,
+  updateReflexIncident,
+} from "../reflex/incidentBroker";
+import { makeRepairSpawnPlan, renderReflexReplay, writeRepairSpawnPlan } from "../reflex/repairCoordinator";
+import { makePatchContract, verifyPatchContract } from "../reflex/patchContract";
+import {
+  applyPromotion,
+  makeGenerationState,
+  makeRunGeneration,
+  readGenerationState,
+  routeIncidentForFutureLanes,
+  summarizePromotionRouting,
+  writeGenerationState,
+} from "../reflex/generationRouter";
+import { makePromotionReceipt, verifyPromotionGate, writePromotionReceipt } from "../reflex/promotionGate";
+import { shouldContinue, type RunProgressState } from "../reflex/progressWatchdog";
+import type { PatchContract, ReflexVerificationReceipt } from "../reflex/incidentTypes";
 
 const here = dirname(fileURLToPath(import.meta.url)); // templates/bin
 const templates = join(here, "..");                   // templates
@@ -597,6 +619,13 @@ const HELP = `sfn - Solo Founder Nodes local CLI   (run via: npm run sfn -- <cmd
   phase status|verify --phase <p> [--stage <R|A|L|P|H>] [--project <path>]
   phase complete --phase <p> --stage <R|A|L|P|H> --receipt <id>... [--project <path>]
   phase route --to <phase> --reason <text> [--evidence <path>] [--project <path>]
+  reflex watch --project <path> --run <run-id> [--events <n>]
+  reflex incidents|replay [--project <path>]
+  reflex inspect --incident <id> [--project <path>]
+  reflex spawn --incident <id> [--project <path>] [--target-generation <G1>]
+  reflex verify --incident <id> [--project <path>] [--contract <file>] [--verification <file>]
+  reflex promote --incident <id> --from <G0> --to <G1> [--project <path>] [--contract <file>] [--verification <file>]
+  reflex budget --state <file>
   hooks install --target <pi|hermes|openclaw|trae|host|all> [--project <path>] [--mode native|generic-until-verified] [--dry-run]
   agent list|matrix
   agent install-hooks --target <host|all> [--project <path>] [--mode native|generic-until-verified] [--dry-run]
@@ -1005,6 +1034,188 @@ async function main() {
         process.exit(0);
       }
       console.error("phase: status|verify --phase <p> [--stage <R|A|L|P|H>] | complete --phase <p> --stage <R|A|L|P|H> --receipt <id>... | route --to <phase> --reason <text> | gates");
+      process.exit(2);
+    }
+    case "reflex": {
+      const sub = rest[0];
+      const projectPath = resolve(flag(rest, "--project", ".")!);
+      if (sub === "watch") {
+        const runId = flag(rest, "--run");
+        const events = readSoloEvents(projectPath, Number(flag(rest, "--events", "1000")));
+        const result = consumeFailureEvents(projectPath, events, { runId });
+        const generation = readGenerationState(projectPath);
+        if (generation) {
+          let routed = generation;
+          for (const incident of result.incidents.filter((candidate) => result.createdOrUpdated.includes(candidate.id))) {
+            if (incident.classification) routed = routeIncidentForFutureLanes(routed, incident, incident.classification);
+          }
+          writeGenerationState(projectPath, routed);
+        }
+        console.log(JSON.stringify(result, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "incidents") {
+        console.log(JSON.stringify({ projectPath, incidents: readReflexIncidents(projectPath) }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "inspect") {
+        const incidentId = flag(rest, "--incident");
+        if (!incidentId) {
+          console.error("reflex inspect --incident <id> [--project <path>]");
+          process.exit(2);
+        }
+        const incident = readReflexIncident(projectPath, incidentId);
+        const paths = reflexPaths(projectPath);
+        console.log(JSON.stringify({
+          projectPath,
+          incident,
+          paths: {
+            incidentBrief: paths.incidentBriefPath(incident.id),
+            repairDir: paths.incidentDir(incident.id),
+          },
+        }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "spawn") {
+        const incidentId = flag(rest, "--incident");
+        if (!incidentId) {
+          console.error("reflex spawn --incident <id> [--project <path>] [--target-generation <G1>]");
+          process.exit(2);
+        }
+        const incident = readReflexIncident(projectPath, incidentId);
+        if (!incident.classification?.requiresRepair) {
+          console.log(JSON.stringify({
+            projectPath,
+            incidentId,
+            skipped: true,
+            reason: incident.classification?.reason ?? "incident is not classified as repair-required",
+            action: incident.classification?.action,
+          }, jbig, 2));
+          process.exit(0);
+        }
+        const plan = makeRepairSpawnPlan(incident, { targetGenerationId: flag(rest, "--target-generation") });
+        const out = writeRepairSpawnPlan(projectPath, incident, plan);
+        console.log(JSON.stringify({ projectPath, out, plan }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "verify") {
+        const incidentId = flag(rest, "--incident");
+        if (!incidentId) {
+          console.error("reflex verify --incident <id> [--project <path>] [--contract <file>] [--verification <file>]");
+          process.exit(2);
+        }
+        const incident = readReflexIncident(projectPath, incidentId);
+        const repairDir = reflexPaths(projectPath).incidentDir(incidentId);
+        const contractPath = resolve(flag(rest, "--contract", join(repairDir, "patch-contract.json"))!);
+        const verificationPath = resolve(flag(rest, "--verification", join(repairDir, "verification.json"))!);
+        if (!existsSync(contractPath)) {
+          const scaffold = makePatchContract({
+            incidentId,
+            userVisibleSymptom: "",
+            evidence: incident.evidenceRefs.map((ref) => ref.receiptPath ?? ref.eventId),
+            violatedInvariant: "",
+            rootCause: "",
+            systemicFix: "",
+            whyNotOneTaskSpecialCase: "",
+            compatibility: "",
+            regressionFixture: "",
+            liveCanary: "",
+            humanizedUiImpact: "",
+            architectureProofUpdates: [],
+            rollback: "",
+          });
+          writeJson(contractPath, scaffold);
+        }
+        const contract = readJson<PatchContract>(contractPath);
+        const patchVerdict = verifyPatchContract(contract);
+        let verification: ReflexVerificationReceipt | undefined;
+        let promotionVerdict: ReturnType<typeof verifyPromotionGate> | undefined;
+        if (existsSync(verificationPath)) {
+          verification = readJson<ReflexVerificationReceipt>(verificationPath);
+          promotionVerdict = verifyPromotionGate({ incident, patchContract: contract, verification });
+        }
+        updateReflexIncident(projectPath, incidentId, {
+          status: promotionVerdict?.ok ? "verification_ready" : "blocked",
+          patchContractPath: contractPath,
+          verificationPath: existsSync(verificationPath) ? verificationPath : undefined,
+        });
+        console.log(JSON.stringify({
+          projectPath,
+          incidentId,
+          contractPath,
+          verificationPath,
+          patchVerdict,
+          promotionVerdict,
+          next: patchVerdict.ok && !promotionVerdict?.ok
+            ? "write verification.json with regression, live canary, and readability critic pass"
+            : `npm run sfn -- reflex promote --incident ${incidentId} --from <G0> --to <G1> --project .`,
+        }, jbig, 2));
+        process.exit(patchVerdict.ok && (!verification || promotionVerdict?.ok) ? 0 : 1);
+      }
+      if (sub === "promote") {
+        const incidentId = flag(rest, "--incident");
+        const fromGenerationId = flag(rest, "--from");
+        const toGenerationId = flag(rest, "--to");
+        if (!incidentId || !fromGenerationId || !toGenerationId) {
+          console.error("reflex promote --incident <id> --from <G0> --to <G1> [--project <path>] [--contract <file>] [--verification <file>]");
+          process.exit(2);
+        }
+        const incident = readReflexIncident(projectPath, incidentId);
+        const repairDir = reflexPaths(projectPath).incidentDir(incidentId);
+        const contract = readJson<PatchContract>(resolve(flag(rest, "--contract", join(repairDir, "patch-contract.json"))!));
+        const verification = readJson<ReflexVerificationReceipt>(resolve(flag(rest, "--verification", join(repairDir, "verification.json"))!));
+        const gate = verifyPromotionGate({ incident, patchContract: contract, verification });
+        if (!gate.ok) {
+          console.error(JSON.stringify({ projectPath, incidentId, gate }, jbig, 2));
+          process.exit(1);
+        }
+        const existingState = readGenerationState(projectPath) ?? makeGenerationState({
+          activeGeneration: makeRunGeneration({
+            generationId: fromGenerationId,
+            commitSha: "unknown",
+            frontendBuildId: "unknown",
+            convexDeploymentId: "unknown",
+            schemaVersion: "unknown",
+            harnessVersion: "unknown",
+            modelRoutingSnapshotHash: "unknown",
+            proofContractHash: "unknown",
+          }),
+        });
+        const routing = summarizePromotionRouting(existingState, fromGenerationId);
+        const receipt = makePromotionReceipt({
+          incident,
+          fromGenerationId,
+          toGenerationId,
+          ...routing,
+          evidence: [
+            resolve(flag(rest, "--contract", join(repairDir, "patch-contract.json"))!),
+            resolve(flag(rest, "--verification", join(repairDir, "verification.json"))!),
+          ],
+          rollback: `route queued lanes back to ${fromGenerationId} and mark ${toGenerationId} blocked`,
+        });
+        const out = writePromotionReceipt(projectPath, receipt);
+        writeGenerationState(projectPath, applyPromotion(existingState, receipt));
+        console.log(JSON.stringify({ projectPath, out, receipt }, jbig, 2));
+        process.exit(0);
+      }
+      if (sub === "replay") {
+        const text = renderReflexReplay(readReflexIncidents(projectPath));
+        const out = flag(rest, "--out");
+        if (out) writeText(resolve(out), text);
+        console.log(out ? JSON.stringify({ out: resolve(out), text }, jbig, 2) : text);
+        process.exit(0);
+      }
+      if (sub === "budget") {
+        const statePath = flag(rest, "--state");
+        if (!statePath) {
+          console.error("reflex budget --state <file>");
+          process.exit(2);
+        }
+        const state = readJson<RunProgressState>(resolve(statePath));
+        console.log(JSON.stringify({ state, decision: shouldContinue(state) }, jbig, 2));
+        process.exit(0);
+      }
+      console.error("reflex: watch | incidents | inspect | spawn | verify | promote | replay | budget");
       process.exit(2);
     }
     case "run": {

@@ -123,6 +123,19 @@ import {
 } from "./loop/ralphLedger";
 import { verifyFreshRoomProofReceipt, type FreshRoomProofReceipt } from "./proof/freshRoomReceipt";
 import { makeReworkLedger, verifyReworkLedger, type ReworkLedger } from "./rework/reworkLedger";
+import { consumeFailureEvents, readReflexIncident, readReflexIncidents } from "./reflex/incidentBroker";
+import { makeRepairSpawnPlan, writeRepairSpawnPlan } from "./reflex/repairCoordinator";
+import { makePatchContract, verifyPatchContract } from "./reflex/patchContract";
+import {
+  applyPromotion,
+  makeGenerationState,
+  makeRunGeneration,
+  routeIncidentForFutureLanes,
+  summarizePromotionRouting,
+} from "./reflex/generationRouter";
+import { makePromotionReceipt, verifyPromotionGate } from "./reflex/promotionGate";
+import { shouldContinue } from "./reflex/progressWatchdog";
+import { judgeRepairReadability } from "./reflex/readabilityJudge";
 
 let pass = 0;
 let fail = 0;
@@ -1866,6 +1879,176 @@ async function main() {
   check("loop doctor passes complete local command-center layout", doctor.ok && doctor.proofVerdict === "pass", doctor.errors.join("; "));
   const paused = pauseRalphLoop(ralphRoot, { message: "waiting for human provider key", nextAction: "npm run sfn -- setup gate" });
   check("loop pause records resumable blocker", paused.loop.status === "blocked" && paused.loop.milestones[paused.loop.currentMilestone].blockedOn?.nextAction.includes("setup gate") === true);
+
+  // ---------------- Reflex RALPH: event-driven repair arc ----------------
+  console.log("\nReflexRALPH (observe -> classify -> repair in isolation -> promote future lanes):");
+  const reflexRoot = mkdtempSync(join(tmpdir(), `solo-reflex-${process.pid}-`));
+  createRalphLedger({ repoPath: reflexRoot, goal: "prove continuous repair runtime", now: "2026-06-26T00:00:00.000Z" });
+  const generationG0 = makeRunGeneration({
+    generationId: "G0",
+    commitSha: "commit-a",
+    frontendBuildId: "build-a",
+    convexDeploymentId: "convex-a",
+    schemaVersion: "schema-a",
+    harnessVersion: "harness-a",
+    modelRoutingSnapshotHash: "models-a",
+    proofContractHash: "proof-a",
+    createdAt: "2026-06-26T00:00:00.000Z",
+  });
+  const generationState = makeGenerationState({
+    activeGeneration: generationG0,
+    lanes: [
+      { laneId: "lane-running", taskId: "task-01", capability: "tool-schema", generationId: "G0", status: "running", incidentIds: [] },
+      { laneId: "lane-queued", taskId: "task-02", capability: "tool-schema", generationId: "G0", status: "queued", incidentIds: [] },
+      { laneId: "lane-failed", taskId: "task-03", capability: "tool-schema", generationId: "G0", status: "failed", incidentIds: [] },
+    ],
+  });
+  recordSoloEvent(reflexRoot, {
+    event: "tool.error",
+    agentHost: "codex",
+    status: "error",
+    toolName: "mesh_export",
+    message: "tool schema failure: required argument asset_id missing",
+    source: "smoke",
+    payload: { generationId: "G0", taskId: "task-01", invariantId: "tool.schema.asset-id", affectedModule: "tool-schema" },
+  });
+  recordSoloEvent(reflexRoot, {
+    event: "tool.error",
+    agentHost: "codex",
+    status: "error",
+    toolName: "mesh_export",
+    message: "tool schema failure: required argument asset_id missing",
+    source: "smoke",
+    payload: { generationId: "G0", taskId: "task-02", invariantId: "tool.schema.asset-id", affectedModule: "tool-schema" },
+  });
+  const reflexWatch = consumeFailureEvents(reflexRoot, readSoloEvents(reflexRoot, 20), {
+    runId: "run-smoke",
+    now: "2026-06-26T00:01:00.000Z",
+  });
+  const reflexIncidents = readReflexIncidents(reflexRoot);
+  const incident = reflexIncidents[0];
+  check("Reflex watch dedupes repeated error fingerprints", reflexWatch.observed === 2 && reflexIncidents.length === 1 && incident.occurrenceCount === 2);
+  check("Reflex classifier marks repeated schema failure systemic", incident.classification?.kind === "systemic" && incident.classification.requiresRepair === true, incident.classification?.reason ?? "");
+
+  const routedState = routeIncidentForFutureLanes(generationState, incident, incident.classification!);
+  check(
+    "Reflex router pauses queued affected lanes without hot-patching running lanes",
+    routedState.lanes.find((lane) => lane.laneId === "lane-running")?.status === "running"
+      && routedState.lanes.find((lane) => lane.laneId === "lane-queued")?.status === "paused",
+  );
+
+  const repairPlan = makeRepairSpawnPlan(incident, { targetGenerationId: "G1", createdAt: "2026-06-26T00:02:00.000Z" });
+  const repairPlanPath = writeRepairSpawnPlan(reflexRoot, incident, repairPlan);
+  const spawnedIncident = readReflexIncident(reflexRoot, incident.id);
+  check("Reflex repair plan has bounded subagent roles", repairPlan.roles.length === 5 && repairPlan.roles.every((role) => role.outputPath.includes(incident.id)));
+  check("Reflex repair spawn updates incident receipt", spawnedIncident.status === "repair_spawned" && repairPlanPath.includes("repair-plan.json"));
+
+  const weakContract = makePatchContract({
+    incidentId: incident.id,
+    userVisibleSymptom: "mesh export failed",
+    evidence: ["event"],
+    violatedInvariant: "asset id",
+    rootCause: "missing validation",
+    systemicFix: "hardcode task 2 answer-key branch",
+    whyNotOneTaskSpecialCase: "",
+    compatibility: "old calls still work",
+    regressionFixture: "note",
+    liveCanary: "note",
+    humanizedUiImpact: "show next action",
+    architectureProofUpdates: [],
+    rollback: "revert",
+  });
+  const weakPatchVerdict = verifyPatchContract(weakContract);
+  check("Root-cause patch contract rejects bandage fixes", weakPatchVerdict.ok === false && weakPatchVerdict.errors.some((error) => error.includes("answer-key-like")));
+
+  const strongContract = makePatchContract({
+    incidentId: incident.id,
+    userVisibleSymptom: "The mesh exporter failed before the user could download the generated asset.",
+    evidence: ["event:tool.error", ".solo/repairs/inc/incident-brief.json"],
+    violatedInvariant: "Every export tool call must always carry a validated asset id before execution.",
+    rootCause: "The action protocol allowed a viewer export command to skip the asset selection resolver.",
+    systemicFix: "Centralize export argument resolution in the typed action protocol before any exporter runs.",
+    whyNotOneTaskSpecialCase: "Every 3D export, proof registry, and live viewer lane uses the same exporter action.",
+    compatibility: "Existing explicit asset ids still pass through unchanged.",
+    regressionFixture: "npm test -- exporter-missing-asset-id.regression.spec.ts",
+    liveCanary: "Playwright live UI canary exports a generated asset and reopens it.",
+    humanizedUiImpact: "The user sees 'Select or generate an asset before export' with a Generate button.",
+    architectureProofUpdates: ["agent-api-contract", "proof-registry", "domain-pack"],
+    rollback: "Disable the centralized resolver and restore the prior exporter command behind a feature flag.",
+  });
+  const strongPatchVerdict = verifyPatchContract(strongContract);
+  check("Root-cause patch contract accepts systemic repair with invariant and canary", strongPatchVerdict.ok, strongPatchVerdict.errors.join("; "));
+
+  const verification = {
+    schemaVersion: 1 as const,
+    incidentId: incident.id,
+    generationId: "G1",
+    regressionFixture: {
+      command: "npm test -- exporter-missing-asset-id.regression.spec.ts",
+      passed: true,
+      evidenceRef: "docs/proof/reflex/exporter-regression.json",
+    },
+    liveCanary: {
+      command: "npm run test:e2e -- export-canary",
+      passed: true,
+      evidenceRef: "docs/proof/reflex/export-canary.trace.zip",
+    },
+    readabilityCritic: {
+      passed: true,
+      evidenceRef: "docs/proof/reflex/readability-critic.json",
+    },
+    verdict: "pass" as const,
+  };
+  const promotionGate = verifyPromotionGate({ incident, patchContract: strongContract, verification });
+  check("Promotion gate requires patch contract plus regression/canary/readability", promotionGate.ok, promotionGate.errors.join("; "));
+
+  const routing = summarizePromotionRouting(generationState, "G0");
+  const promotionReceipt = makePromotionReceipt({
+    incident,
+    fromGenerationId: "G0",
+    toGenerationId: "G1",
+    ...routing,
+    evidence: ["patch-contract.json", "verification.json"],
+    rollback: "route queued lanes back to G0",
+    promotedAt: "2026-06-26T00:03:00.000Z",
+  });
+  const promotedState = applyPromotion(generationState, promotionReceipt);
+  check(
+    "Promotion routes queued/failed lanes to G1 while active G0 lane stays pinned",
+    promotedState.lanes.find((lane) => lane.laneId === "lane-running")?.generationId === "G0"
+      && promotedState.lanes.find((lane) => lane.laneId === "lane-queued")?.generationId === "G1"
+      && promotedState.lanes.find((lane) => lane.laneId === "lane-failed")?.generationId === "G1",
+  );
+
+  const progressContinue = shouldContinue({
+    absoluteSpendUsd: 1,
+    emergencySpendCapUsd: 25,
+    newProofGatesPassed: 1,
+    newArtifactsCreated: 0,
+    newRequiredFieldsCompleted: 0,
+    sameErrorFingerprintCount: 0,
+    stepsWithoutMeasurableProgress: 0,
+  });
+  const progressRepair = shouldContinue({
+    absoluteSpendUsd: 1,
+    emergencySpendCapUsd: 25,
+    newProofGatesPassed: 0,
+    newArtifactsCreated: 0,
+    newRequiredFieldsCompleted: 0,
+    sameErrorFingerprintCount: 3,
+    stepsWithoutMeasurableProgress: 10,
+  });
+  check("Progress watchdog continues on evidence and triggers repair on repeated fingerprints", progressContinue.action === "continue" && progressRepair.action === "spawn_repair_and_pause_lane");
+
+  const readability = judgeRepairReadability({
+    changedFiles: ["src/exporter.ts", "tests/exporter.regression.spec.ts"],
+    centralizedPolicy: true,
+    understandableNames: true,
+    userFacingErrorHasNextAction: true,
+    patchSmallerThanBehaviorReplaced: true,
+    rawProviderErrorsTranslated: true,
+  });
+  check("Readability critic is a required repair gate", readability.ok && readability.score === 1, readability.errors.join("; "));
 
   // ---------------- SoloControlPlane: durable loop control ----------------
   console.log("\nSoloControlPlane (durable control plane):");

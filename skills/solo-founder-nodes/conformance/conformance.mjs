@@ -33,7 +33,7 @@ ok("4 non-negotiables present", nn.every((n) => M.includes(n)), nn.filter((n) =>
 const nodes = ["1-discover", "2-benchmark", "3-setup", "4-build", "5-adapter", "6-verify", "7-iterate"];
 ok("7 node playbooks present", nodes.every((n) => existsSync(join(skill, "nodes", `${n}.md`))));
 ok("phase order is verify then iterate", /adapter\s*\|\s*wire[\s\S]*\|\s*6\s*\|\s*verify[\s\S]*\|\s*7\s*\|\s*iterate/i.test(master));
-const refs = ["honest-lane", "memory", "context-substrate", "control-plane", "cli-command-center", "host-hooks-fresh-judge", "design-bridge", "agent-chat-ux", "gstack-bridge", "benchmarks", "research", "research-spine", "research-governor", "architecture-governor", "direction-change", "intent-ralph", "idea-tweaks", "component-ralph", "assembly-coherence", "domain-packs", "domain-ralph", "acceptance-compiler", "operation-ralph", "prometheus-mode", "industry-3d-assets", "part-research-ralph", "local-3d-model-ralph"];
+const refs = ["honest-lane", "memory", "context-substrate", "control-plane", "cli-command-center", "host-hooks-fresh-judge", "design-bridge", "agent-chat-ux", "gstack-bridge", "benchmarks", "research", "research-spine", "research-governor", "architecture-governor", "direction-change", "intent-ralph", "idea-tweaks", "component-ralph", "assembly-coherence", "domain-packs", "domain-ralph", "acceptance-compiler", "operation-ralph", "prometheus-mode", "reflex-ralph", "adaptive-budget-policy", "root-cause-patch-contract", "industry-3d-assets", "part-research-ralph", "local-3d-model-ralph"];
 ok("references present", refs.every((r) => existsSync(join(skill, "references", `${r}.md`))));
 ok("domain pack catalog present", ["3d-assets", "construction-mockups", "manufacturing-parts", "onboarding-docs", "avatar-vtuber", "film-vfx", "game-assets", "finance-nodeagent", "video-remix", "image-editing"].every((d) => existsSync(join(skill, "domains", d, "invariants.md"))));
 
@@ -67,6 +67,15 @@ ok("templates substrate present", [
   "prometheus/improvement-plan.schema.json",
   "prometheus/replay-page.ts",
   "prometheus/compareVersions.ts",
+  "reflex/incidentTypes.ts",
+  "reflex/incidentBroker.ts",
+  "reflex/incidentClassifier.ts",
+  "reflex/repairCoordinator.ts",
+  "reflex/generationRouter.ts",
+  "reflex/patchContract.ts",
+  "reflex/promotionGate.ts",
+  "reflex/progressWatchdog.ts",
+  "reflex/readabilityJudge.ts",
   "phase/phaseRalph.ts",
   "setup/externalSetupGate.ts",
   "setup/openrouterAgentHosts.ts",
@@ -120,6 +129,7 @@ ok("self-researched domain pack directive present", /domain synthesize/i.test(ma
 ok("acceptance compiler directive present", /Acceptance Compiler/i.test(master) && /acceptance compile/i.test(master) && /No proof gate registry, no build/i.test(master));
 ok("operation RALPH directive present", /Operation RALPH/i.test(master) && /operation verify/i.test(master) && /No operation proof, no workflow claim/i.test(master));
 ok("Prometheus Mode directive present", /Prometheus Mode/i.test(master) && /prometheus run/i.test(master) && /Every version needs proof/i.test(master));
+ok("Reflex RALPH directive present", /Reflex RALPH/i.test(master) && /reflex watch/i.test(master) && /No hot-patch/i.test(master) && /Root-Cause Patch Contract/i.test(master));
 ok("3D/fresh-user/trust proof directives present", /3D founder scenario/i.test(master) && /fresh-user/i.test(master) && /trust verify/i.test(master));
 ok("industry-grade 3D asset quality gate directive present", /3D asset quality gate/i.test(master) && /3d quality-plan/i.test(master) && /assetQualityGate/i.test(master));
 ok("3D part-research RALPH directive present", /part-research RALPH/i.test(master) && /3d part-research-plan/i.test(master) && /partResearchRalph/i.test(master));

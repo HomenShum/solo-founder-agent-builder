@@ -145,6 +145,19 @@ artifact/harness improvement through receipts, not model self-training. Spec:
 [`references/prometheus-mode.md`](references/prometheus-mode.md); implementation:
 [`templates/prometheus/`](templates/prometheus/).
 
+**Reflex RALPH:** while benchmark/proof lanes are running, consume `.solo/events.jsonl` with
+`npm run sfn -- reflex watch --project . --run <run-id>`. Reflex RALPH classifies failures as
+transient, task-specific, systemic, or security; retries transient provider failures; quarantines bad
+fixtures; and pauses only affected future lanes for systemic defects. No hot-patch is allowed: active
+lanes stay pinned to their `RunGeneration`; repair roles run in an isolated next generation; promotion
+requires a Root-Cause Patch Contract, negative regression fixture, live canary, readability/UX critic,
+and promotion receipt. Use `reflex incidents|inspect|spawn|verify|promote|replay` to manage the
+repair loop. Specs: [`references/reflex-ralph.md`](references/reflex-ralph.md),
+[`references/root-cause-patch-contract.md`](references/root-cause-patch-contract.md), and
+[`references/adaptive-budget-policy.md`](references/adaptive-budget-policy.md); implementation:
+[`templates/reflex/`](templates/reflex/). Doctrine: observe immediately, classify immediately, repair
+in isolation, verify on a canary, and promote only to future lanes.
+
 **Research spine:** at `discover`, create or refresh `research-spine.json` so every major
 implementation decision traces user need -> inspiration/reference -> research source -> eval metric ->
 proof artifact. From `build` onward, block uncited decisions; from `verify` onward, block supported

@@ -269,6 +269,27 @@ Prometheus runs whose latest version has not passed. Doctrine:
 [`templates/prometheus/`](templates/prometheus/). Doctrine:
 **Every version needs proof; every failed proof needs a next-version plan.**
 
+**Reflex RALPH (continuous repair runtime):** Prometheus improves after a version has proof; Reflex
+RALPH reacts while the benchmark/proof run is still unfolding. Consume the event bus with
+`npm run sfn -- reflex watch --project . --run <run-id>` so `tool.error`, `browser.proof.stop`,
+`eval.stop`, and `judge.verdict` events are deduped, classified, and routed. **No hot-patch** is
+allowed: active lanes remain pinned to their current `RunGeneration`; repair agents work in an
+isolated future generation; only queued/failed future lanes inherit the fix after regression, live
+canary, readability/UX critic, and promotion receipts pass. Use
+`npm run sfn -- reflex incidents|inspect|spawn|verify|promote|replay ...` to manage the loop. Every
+repair must satisfy the **Root-Cause Patch Contract**: user-visible symptom, evidence, violated
+invariant, root cause, systemic fix, why it is not a one-task special case, compatibility, negative
+regression fixture, live canary, humanized UI impact, architecture/proof updates, and rollback.
+Provider timeouts retry/fallback; bad single-task fixtures quarantine; systemic tool-schema, proof,
+UI, component, assembly, topology, or no-progress failures pause only affected future lanes. Budgets
+are progress-aware: checkpoint productive benchmark work, continue when proof gates/artifacts/required
+fields move, spawn repair after repeated fingerprints, and stop only on safety, no-progress, or
+emergency spend caps. Doctrine: [`references/reflex-ralph.md`](references/reflex-ralph.md),
+[`references/root-cause-patch-contract.md`](references/root-cause-patch-contract.md), and
+[`references/adaptive-budget-policy.md`](references/adaptive-budget-policy.md); copyable
+implementation: [`templates/reflex/`](templates/reflex/). Doctrine:
+**Observe immediately, classify immediately, repair in isolation, verify on a canary, and promote only to future lanes.**
+
 ## Research spine (required for research-backed implementation)
 
 The agent must not turn a founder's domain prompt into unsupported architecture or product claims. At

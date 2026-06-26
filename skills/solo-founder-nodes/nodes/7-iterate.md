@@ -33,12 +33,17 @@ Inputs:
   failure classes, and proof refs. Never read held-out task answers from memory.
 - `research-spine.json`, so every proposed fix cites the relevant research/practical reference and
   expected eval metric.
+- Reflex RALPH incident records from `.solo/incidents.jsonl`, including classification, impacted
+  generation/lane ids, evidence refs, repair spawn plans, and any Root-Cause Patch Contract draft.
 
 Outputs:
 - `failure-hypothesis.json`: verified failure class, routed phase, expected metric movement, and why
   earlier/later routes were rejected.
 - `rework-ledger.json`: the approach replaced/deleted/deprecated, why it failed, the new shared fix,
   proof receipts, kept/deleted artifacts, and the lesson.
+- A Reflex repair receipt for systemic/security/progress-stall incidents: bounded subagent role
+  briefs, root-cause diagnosis, patch contract, verification receipts, promotion decision, and
+  generation routing (`G0` pinned, future `G1` canary/adopted/rejected).
 - Updated phase receipt for the routed phase, then a new Phase 6 verification run.
 - Updated memory with aggregate deltas and proof refs only.
 
@@ -51,6 +56,11 @@ Outputs:
    constraints, run `npm run sfn -- tweak intake --goal "<goal>" --input <text-or-file> --domain <domain>`
    and `npm run sfn -- tweak verify --receipt <file>`. Treat the tweak receipt as routing evidence:
    it may send the loop back to discover, setup, build, adapter, or verify before any rework is kept.
+0b. **Load Reflex RALPH incidents.** Run `npm run sfn -- reflex incidents --project . --run <run-id>`
+   and inspect any open systemic, security, or progress-stall incidents before choosing a fix. If Phase
+   6 wrote raw `SoloEvent` failures but no incident ledger, run `npm run sfn -- reflex watch --project . --run <run-id>`
+   first. Active lanes remain pinned to their current `RunGeneration`; iterate can only repair in an
+   isolated future generation.
 1. **Classify the verified failure.** Use Phase 6 artifacts to assign one route:
    - `discover`: the real user need, screenshot interpretation, or unsupported-claim labeling was
      wrong.
@@ -63,18 +73,32 @@ Outputs:
    `npm run sfn -- gstack recommend --phase iterate --goal "<goal>" --ui --perf` when UI, product,
    performance, or proof quality is involved. Repeated failures require `investigate`, review, QA, and
    retro receipts before the fix can be kept.
+2a. **Spawn bounded Reflex repair for systemic failures.** For an open systemic/security/progress-stall
+   incident, run `npm run sfn -- reflex spawn --project . --incident <id> --role <role>`. Spawn only the
+   roles needed for diagnosis and verification (for example `root-cause`, `test-writer`, `runtime`,
+   `ux-judge`, `security`, `doc-writer`). Each role receives the incident brief, generation pin, allowed
+   files/tools, budget cap, and required output receipt. No role may patch the active run lane.
 3. **Write the research-backed hypothesis.** Update the relevant decision receipt in
    `research-spine.json`: cite the research/practical sources, name the metric expected to move, list
    rejected alternatives, and mark unsupported claims honestly.
 4. **Apply one shared fix in the routed phase.** The fix must improve a reusable tool, context
    substrate, generic writer, API contract, UI affordance, provider/self-hosted setup, or proof
    harness. Never add a per-task writer, benchmark detector, or hidden product path.
+4a. **Require the Root-Cause Patch Contract.** Before any Reflex repair can be kept, run
+   `npm run sfn -- reflex verify --project . --incident <id> --contract <root-cause-patch-contract.json>`.
+   The contract must identify the shared root cause, name the first broken phase, cite the changed files,
+   add/adjust deterministic tests, include regression proof, state deployment/user-visible impact, and
+   prove no held-out answers or per-task shortcuts were introduced.
 5. **Record build-to-delete evidence.** If the fix replaces, disables, or deprecates anything, write
    `rework-ledger.json` and run
    `npm run sfn -- rework verify --ledger rework-ledger.json`.
 6. **Re-run Phase 6 verification.** A fix is accepted only if the live UI proof improves or holds on
    held-out/generalization evidence without weakening the fresh-room proof, export/reopen proof,
    design-quality receipt, deployment proof, or official scorer binding.
+6a. **Promote only future generations.** After verification passes, run
+   `npm run sfn -- reflex promote --project . --incident <id> --contract <root-cause-patch-contract.json>`.
+   Promotion can adopt `G1` for queued/future lanes, but must leave already-running `G0` lanes auditable.
+   If the canary fails, reject the promotion and keep the incident open with the failed hypothesis.
 7. **Accept, revert, or route deeper.** If only tuned/easy cases improve, revert. If the proof capture
    fails, route to `verify`. If the same failure repeats, route to the earliest phase whose receipt was
    wrong and keep the failed hypothesis in memory so the agent does not repeat it.
@@ -89,6 +113,8 @@ Outputs:
 - Every kept fix needs both a research-backed decision receipt and a passing re-verification receipt.
 - The loop can jump back to any earlier phase, including `discover`, when the verified failure proves
   the premise was wrong.
+- Reflex repairs must be generational. No hot-patching active lanes, no unbounded subagent swarm, no
+  patch without a verified Root-Cause Patch Contract, and no promotion without replay/canary evidence.
 
 ## Gate
 Any re-run that spends model/provider money, uses paid 3D generation, changes shared/prod data, or

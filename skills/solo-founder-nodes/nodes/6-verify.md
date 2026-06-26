@@ -19,6 +19,7 @@ Outputs:
 - The final verdict line: REAL CAPABILITY (transfers) vs OVERFIT (scored offline, fails in-app), with the non-transferring task ids enumerated.
 - `proof-verdict.json` for proof-pack runs, created by `npm run sfn -- proof verdict --run <dir>`, so supported major claims have actual proof artifact paths.
 - A fresh-room proof receipt for each live browser case, verified with `npm run sfn -- fresh-room verify --receipt <fresh-room-receipt.json>`.
+- A Reflex RALPH incident ledger (`.solo/incidents.jsonl`) and repair routing receipt when verification exposes repeated, systemic, safety, or progress-stall failures. This is a routing artifact for Phase 7, not an excuse to hot-patch the active run.
 
 ## Procedure (agent-driven; human steers by comment)
 - **Control-plane preflight.** Load the `SoloControlPlane` loop summary and require a ready graph-context receipt. Query the graph for the real composer, upload, export, run-id, and scorer seams before driving the browser. Record every UI attempt as a trace span with screenshot/DOM/run-id attrs.
@@ -54,7 +55,8 @@ claims also need topology/retopo, UV unwrap, PBR material maps, wireframe/UV scr
 and LOD/collision/pivot proof when the target is game/character/scene/marketplace. A nonblank canvas,
 random primitive pile, or OBJ-only export downgrades the asset claim to UNVERIFIED.
 6d. **Seal fresh-room proof receipts.** For every live browser case, write a fresh-room receipt containing room id, exact command, model, prompt, trace/video/screenshots, exported/reopened files, official scorer result, cost, latency, token usage, and proof signals. Run `npm run sfn -- fresh-room verify --receipt <fresh-room-receipt.json>`. A missing or failing receipt blocks `proof-verdict.json` from passing.
-7. **Write the failure route for Phase 7 iterate.** If transfer fails, classify the route without fixing yet: `discover` if the user need was wrong, `benchmark` if the benchmark/rubric measured the wrong thing, `setup` if environment/provider/deploy facts are missing, `build` if the app/UI cannot express the capability, or `adapter` if the harness path diverges from the product path. Do NOT silently re-tune to make the number look good; Phase 7 consumes this verified failure evidence and chooses the smallest research-backed change.
+6e. **Run Reflex RALPH on verification failures.** If the same failure repeats, a setup/provider/tool lane fails, the proof stalls, or a security/safety boundary trips, run `npm run sfn -- reflex watch --project . --run <run-id>`. Reflex classifies incidents as transient, task-specific, systemic, security, or progress-stall; pins active lanes to their current `RunGeneration`; pauses queued future lanes when needed; and writes the incident plus evidence pointers. It must not mutate the active generation while verification is still running.
+7. **Write the failure route for Phase 7 iterate.** If transfer fails, classify the route without fixing yet: `discover` if the user need was wrong, `benchmark` if the benchmark/rubric measured the wrong thing, `setup` if environment/provider/deploy facts are missing, `build` if the app/UI cannot express the capability, `adapter` if the harness path diverges from the product path, or `verify` if the proof capture itself failed. Attach the Reflex incident id when one exists. Do NOT silently re-tune to make the number look good; Phase 7 consumes this verified failure evidence and chooses the smallest research-backed change.
 8. **Write the in-app transfer proof to memory.** Persist to memory ([`../references/memory.md`](../references/memory.md), L2, kind `in_app_transfer`): per verified task the DOM signal, the screenshot path, the recorded run id, and the binary verdict; the suite-level REAL CAPABILITY vs OVERFIT line; and the enumerated non-transferring task ids + divergence class. Store split membership + the proof refs (screenshot/dom_signal/trace) only — NOT held-out task answers (quarantine). This closes the suite's memory loop so a future re-tune or app-wiring fix targets the non-transferring ids without re-running everything.
 
 ## Fresh-Room Live Browser Contract (the 7 steps a passing run must execute)
@@ -92,6 +94,7 @@ The prose in **Procedure** (steps 2-6) makes the in-app transfer doctrine human-
 - Never claim "coherent 3D asset", "game-ready", "CAD-ready", "marketplace-ready", "prototype", or
   "industry-grade" without a passing `asset-quality` receipt. OBJ-only proof is personal-research
   scaffold evidence at most.
+- Never hot-patch an active generation after Reflex RALPH detects a systemic incident. Active lanes stay pinned to the generation they started on; only a verified Root-Cause Patch Contract can promote a future generation.
 
 ## Design Bridge (subroutine — only when the task needs UI parity)
 If the verified task includes any UI-facing surface, run the Design Bridge verification before declaring transfer. This is the verify-side mirror of the build-phase Bridge: build constructs the surface, verify proves the surface renders the proof to spec. Full subroutine: [`../references/design-bridge.md`](../references/design-bridge.md).

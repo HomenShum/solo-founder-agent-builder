@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { agentHostMatrix, readSoloEventLog, type AgentHostMatrixRow } from "../events/soloEventBus";
+import { readReflexIncidents } from "../reflex/incidentBroker";
 import {
   loadRalphLoop,
   ralphMilestoneLabels,
@@ -29,9 +30,19 @@ export type CommandCenterSnapshot = {
     receiptFileCount: number;
     completedMilestones: number;
     blockedMilestones: number;
+    incidentCount: number;
+    systemicIncidentCount: number;
   };
   artifacts: Array<{ path: string; exists: boolean; sizeBytes?: number }>;
   recentEvents: Array<Record<string, unknown>>;
+  incidents: Array<{
+    id: string;
+    status: string;
+    kind: string;
+    action: string;
+    occurrenceCount: number;
+    humanizedStatus: string;
+  }>;
   agentHosts: AgentHostMatrixRow[];
   runtime: {
     node: string;
@@ -54,6 +65,7 @@ export function makeDashboardSnapshot(repoPath: string, options: { eventLimit?: 
   const proofVerdict = readProofVerdict(paths.proofVerdictPath);
   const recentEvents = readSoloEventLog(projectPath, options.eventLimit ?? 12);
   const allEvents = readSoloEventLog(projectPath, 100_000);
+  const incidents = readReflexIncidents(projectPath);
   const artifacts = [
     paths.statePath,
     paths.eventsPath,
@@ -82,9 +94,19 @@ export function makeDashboardSnapshot(repoPath: string, options: { eventLimit?: 
       receiptFileCount: countFiles(paths.receiptsDir),
       completedMilestones: loop ? Object.values(loop.milestones).filter((state) => state.status === "completed").length : 0,
       blockedMilestones: loop ? Object.values(loop.milestones).filter((state) => state.status === "blocked").length : 0,
+      incidentCount: incidents.length,
+      systemicIncidentCount: incidents.filter((incident) => incident.classification?.requiresRepair).length,
     },
     artifacts,
     recentEvents,
+    incidents: incidents.slice(-8).map((incident) => ({
+      id: incident.id,
+      status: incident.status,
+      kind: incident.classification?.kind ?? "unclassified",
+      action: incident.classification?.action ?? "pending",
+      occurrenceCount: incident.occurrenceCount,
+      humanizedStatus: incident.classification?.humanizedStatus ?? "classification pending",
+    })),
     agentHosts: agentHostMatrix(),
     runtime: {
       node: process.version,
@@ -135,6 +157,7 @@ export function renderDashboardSnapshot(snapshot: CommandCenterSnapshot): string
   lines.push(`  events: ${snapshot.metrics.eventCount} total, ${snapshot.metrics.recentEventCount} recent`);
   lines.push(`  receipt files: ${snapshot.metrics.receiptFileCount}`);
   lines.push(`  milestones: ${snapshot.metrics.completedMilestones} completed, ${snapshot.metrics.blockedMilestones} blocked`);
+  lines.push(`  incidents: ${snapshot.metrics.incidentCount} total, ${snapshot.metrics.systemicIncidentCount} repair-required`);
   lines.push("");
 
   lines.push("Artifacts:");
@@ -165,8 +188,20 @@ export function renderDashboardSnapshot(snapshot: CommandCenterSnapshot): string
   }
 
   lines.push("");
+  lines.push("Reflex RALPH:");
+  if (snapshot.incidents.length === 0) {
+    lines.push("  no incidents recorded");
+  } else {
+    for (const incident of snapshot.incidents) {
+      lines.push(`  ${incident.id}: ${incident.kind}/${incident.status} x${incident.occurrenceCount} -> ${incident.action}`);
+      lines.push(`    ${incident.humanizedStatus}`);
+    }
+  }
+
+  lines.push("");
   lines.push("Next Commands:");
   lines.push("  npm run sfn -- loop doctor --project .");
+  lines.push("  npm run sfn -- reflex watch --project . --run <run-id>");
   lines.push("  npm run sfn -- agent collect --project .");
   lines.push("  npm run sfn -- proof verdict --run <proof-run-dir>");
   return lines.join("\n");
