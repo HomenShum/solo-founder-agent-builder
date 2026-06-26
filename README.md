@@ -10,6 +10,12 @@ It researches what good means, builds the app and its agent, runs the real workf
 
 > **Skills suggest. Hooks observe. State remembers. Receipts prove.**
 
+<div align="center">
+<img src="assets/solo-founder-walkthrough.gif" alt="Walkthrough: builder console generates a 3D scroll story, customer-facing landing page with animated brand text and 3D viewer, internal proof report with 32/33 gates passed" width="760">
+
+<sub>↑ A one-prompt run: the agent researches, builds a 3D product story, separates builder and customer routes, and proves it with gates.</sub>
+</div>
+
 ## Why this exists
 
 Most agent repos give an AI model a skill, plugin, MCP server, or rule file and call it autonomous.
