@@ -379,6 +379,253 @@ sequenceDiagram
 
 ---
 
+## System architecture graph
+
+How the Solo Founder Agent Builder components connect:
+
+```mermaid
+graph TB
+    subgraph User["User Layer"]
+        GoalPrompt["/goal Prompt"]
+        GoalResult["GOAL RESULT"]
+    end
+
+    subgraph Agent["Coding Agent / IDE"]
+        Skill["SKILL.md → MASTER_SKILL.md"]
+        Subagents["Bounded Subagents"]
+    end
+
+    subgraph Hooks["Hook Layer"]
+        SessionStart["Session Start Hook"]
+        PostTool["Post-Tool-Use Hook"]
+        StopHook["Stop / Final Answer Hook"]
+    end
+
+    subgraph Loop["RALPH Loop State"]
+        LoopState[".solo/loop-state.json"]
+        Events[".solo/events.jsonl"]
+        Checkpoints["Milestone Receipts"]
+    end
+
+    subgraph Research["Research Governor"]
+        SourceTiers["T0–T5 Source Tiers"]
+        ResearchBrief["Research Brief"]
+    end
+
+    subgraph Packs["Domain + Reference Packs"]
+        DomainPack["Domain Pack"]
+        RefPack["Reference Pack"]
+        DirectionReceipt["Direction Receipt"]
+    end
+
+    subgraph Council["Critique Council"]
+        Contrarian["Contrarian"]
+        Buyer["Buyer"]
+        Taste["Product / Taste"]
+        Security["Security / Privacy"]
+        Maintain["Maintainability"]
+        DomainPro["Domain Professional"]
+    end
+
+    subgraph Build["Live Build"]
+        AppUI["App / UI"]
+        AgentHarness["Agent Harness + Tools"]
+        Context["Context Pack"]
+    end
+
+    subgraph Proof["Proof Layer"]
+        Browser["Browser Proof Run"]
+        Screenshots["Screenshots / Video / Trace"]
+        Exports["Exported Artifacts"]
+        Scorer["Scorer / Verifier"]
+    end
+
+    subgraph Judge["Fresh-Context Judge"]
+        ProofVerdict[".solo/proof-verdict.json"]
+        ReceiptCheck["Receipt Completeness Check"]
+    end
+
+    subgraph Registry["Proof Registry"]
+        Receipts["receipts/R/A/L/P/H"]
+        RepairReceipts["repairs/incident-*/"]
+    end
+
+    subgraph CIBackstop["CI Backstop"]
+        CIValidate["Validate Receipts + Architecture Map"]
+    end
+
+    subgraph ArchGraph["Architecture Governor"]
+        SysMap["docs/system-map.graph.json"]
+        Mermaid["docs/system-map.mmd"]
+        SysHTML["docs/system-map.html"]
+    end
+
+    GoalPrompt --> Skill
+    Skill --> LoopState
+    SessionStart --> LoopState
+    SessionStart --> SysMap
+    SysMap --> Skill
+
+    Skill --> Research
+    Research --> SourceTiers
+    SourceTiers --> ResearchBrief
+    ResearchBrief --> DomainPack
+    ResearchBrief --> RefPack
+    GoalPrompt --> DirectionReceipt
+
+    DomainPack --> Council
+    RefPack --> Council
+    Council --> Contrarian
+    Council --> Buyer
+    Council --> Taste
+    Council --> Security
+    Council --> Maintain
+    Council --> DomainPro
+    Council -->|challenges + risks| LoopState
+
+    LoopState --> Build
+    Build --> AppUI
+    Build --> AgentHarness
+    Build --> Context
+    PostTool --> Events
+    Events --> Checkpoints
+
+    Build --> Proof
+    Proof --> Browser
+    Browser --> Screenshots
+    Browser --> Exports
+    Browser --> Scorer
+    Screenshots --> Registry
+    Exports --> Registry
+    Scorer --> Registry
+
+    Proof -->|failure| RepairReceipts
+    RepairReceipts -->|canary pass| Build
+
+    Proof --> Judge
+    Judge --> ReceiptCheck
+    ReceiptCheck --> Registry
+    Judge --> ProofVerdict
+    ProofVerdict -->|FAIL| Build
+    ProofVerdict -->|PASS| GoalResult
+
+    StopHook --> Judge
+    GoalResult --> CIBackstop
+    CIBackstop --> CIValidate
+    CIValidate --> Registry
+    CIValidate --> ArchGraph
+
+    style User fill:#e1f5fe
+    style Agent fill:#f3e5f5
+    style Hooks fill:#fff3e0
+    style Loop fill:#e8f5e9
+    style Research fill:#fce4ec
+    style Packs fill:#e0f7fa
+    style Council fill:#fff8e1
+    style Build fill:#e8f5e9
+    style Proof fill:#fce4ec
+    style Judge fill:#f3e5f5
+    style Registry fill:#e0f2f1
+    style CIBackstop fill:#ffebee
+    style ArchGraph fill:#e1f5fe
+```
+
+## Component dependency graph
+
+What a successful run creates and how the artifacts depend on each other:
+
+```mermaid
+graph LR
+    subgraph Solo[".solo/"]
+        LoopState["loop-state.json"]
+        Events["events.jsonl"]
+        Verdict["proof-verdict.json"]
+        GoalMD["GOAL_RESULT.md"]
+        GoalJSON["goal-result.json"]
+
+        subgraph Receipts["receipts/"]
+            R["R/"]
+            A["A/"]
+            L["L/"]
+            P["P/"]
+            H["H/"]
+        end
+
+        subgraph Dir["direction/"]
+            Intake["direction-intake.md"]
+            Proposal["direction-proposal.json"]
+            Decision["direction-decision.md"]
+        end
+
+        subgraph Dom["domain/"]
+            DomPack["domain-pack.json"]
+            Invariants["invariants.md"]
+            ProofGates["proof-gates.json"]
+            RegFixtures["regression-fixtures.json"]
+        end
+
+        subgraph Ref["reference/"]
+            RefPack["reference-pack.json"]
+            RefDigest["reference-digest.md"]
+            RefProof["reference-proof.json"]
+        end
+
+        subgraph Repairs["repairs/"]
+            Incident["incident-*/"]
+        end
+    end
+
+    subgraph Docs["docs/"]
+        QA["qa/"]
+        Proof["proof/"]
+        Eval["eval/"]
+        ResearchDocs["research/"]
+        ADR["adr/"]
+        SysMap["system-map.graph.json"]
+        SysMmd["system-map.mmd"]
+        SysHtml["system-map.html"]
+    end
+
+    LoopState --> Events
+    Events --> Receipts
+    Intake --> Proposal
+    Proposal --> Decision
+    Decision --> LoopState
+
+    DomPack --> Invariants
+    DomPack --> ProofGates
+    DomPack --> RegFixtures
+    ProofGates --> Verdict
+
+    RefPack --> RefDigest
+    RefPack --> RefProof
+    RefProof --> Verdict
+
+    Receipts --> Verdict
+    Incident --> Receipts
+
+    Verdict --> GoalMD
+    Verdict --> GoalJSON
+
+    Proof --> Verdict
+    QA --> Proof
+    Eval --> Proof
+    ResearchDocs --> DomPack
+    ADR --> SysMap
+    SysMap --> SysMmd
+    SysMap --> SysHtml
+
+    style Solo fill:#e8f5e9
+    style Docs fill:#e1f5fe
+    style Receipts fill:#fff3e0
+    style Dir fill:#fce4ec
+    style Dom fill:#e0f7fa
+    style Ref fill:#f3e5f5
+    style Repairs fill:#ffebee
+```
+
+---
+
 ## Direction RALPH
 
 Used when the user changes product direction.
