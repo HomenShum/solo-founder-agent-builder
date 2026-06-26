@@ -284,6 +284,101 @@ Then specialized loops run when needed.
 
 ---
 
+## End-to-end sequence
+
+What happens behind the scenes from the moment a user pastes a `/goal` prompt into any coding agent or IDE:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant IDE as Coding Agent / IDE
+    participant Skill as SKILL.md + MASTER_SKILL.md
+    participant Hooks as Hook Layer
+    participant Loop as RALPH Loop State
+    participant Research as Research Governor
+    participant Domain as Domain Pack
+    participant Ref as Reference Pack
+    participant Council as Critique Council
+    participant Build as Live Build
+    participant Browser as Browser Proof
+    participant Judge as Fresh-Context Judge
+    participant Registry as Proof Registry
+    participant CI as CI Backstop
+
+    User->>IDE: Paste /goal prompt
+    Note over IDE: Session starts
+    Hooks->>Loop: Read loop state (.solo/loop-state.json)
+    Hooks->>IDE: Inject context: architecture graph, prior receipts
+    IDE->>Skill: Fetch SKILL.md → MASTER_SKILL.md
+    Skill->>Loop: Initialize durable RALPH state
+
+    rect rgb(240, 248, 255)
+        Note over IDE,Domain: R — Reality
+        IDE->>IDE: Inspect repo, current state, system map
+        IDE->>Research: Query: what domain + references apply?
+        Research-->>IDE: Research brief (T0–T5 sources)
+        IDE->>Domain: Generate domain pack (ontology, invariants, proof gates)
+        IDE->>Ref: Generate reference pack (if product/style/SDK reference exists)
+    end
+
+    rect rgb(255, 250, 240)
+        Note over Council,Loop: A — Acceptance Bar
+        IDE->>Council: Run critique council
+        Council->>Council: Contrarian / buyer / taste / security / maintainability / domain
+        Council-->>IDE: Challenges, risks, accepted/parked/rejected
+        IDE->>Loop: Compile acceptance criteria → executable proof gates
+        Loop->>Registry: Register required receipts (screenshots, video, trace, scorer, domain)
+    end
+
+    rect rgb(240, 255, 240)
+        Note over IDE,Build: L — Live Build
+        IDE->>Build: Build app UI + agent harness + tools + context
+        Hooks->>IDE: Post-tool-use: record events, check safety
+        Build->>Loop: Checkpoint progress (events.jsonl, receipts/R/)
+        IDE->>IDE: Keep work resumable (durable state, checkpoints)
+    end
+
+    rect rgb(255, 240, 245)
+        Note over IDE,Registry: P — Proof Run
+        IDE->>Browser: Run real workflow in fresh browser
+        Browser->>Browser: Capture screenshots, video, trace, exports
+        Browser->>Browser: Check console errors, verify pixels
+        Browser->>Browser: Verify domain invariants, reload/reopen/export
+        Browser-->>Registry: Save proof receipts
+
+        alt Failure detected
+            Browser->>Loop: Record failure evidence
+            Loop->>IDE: Trigger Reflex RALPH
+            IDE->>IDE: Classify root cause (transient / task-specific / systemic)
+            IDE->>IDE: Spawn isolated repair lane
+            IDE->>Browser: Add regression fixture, re-run same user path
+            Browser->>Loop: Canary check before promoting fix
+            Browser-->>Registry: Save repair receipts (repairs/incident-*/)
+        end
+    end
+
+    rect rgb(248, 240, 255)
+        Note over Judge,Registry: H — Harden + Final Judge
+        IDE->>Judge: Run fresh-context completion judge
+        Judge->>Registry: Verify all required receipts exist
+        Judge->>Registry: Check proof-verdict.json
+        alt Receipts missing or proof insufficient
+            Judge-->>IDE: FAIL — return to Live Build or Proof Run
+        else All proof gates pass
+            Judge-->>IDE: PASS
+        end
+    end
+
+    IDE->>Loop: Write GOAL_RESULT.md + goal-result.json
+    IDE->>CI: Push commit (CI runs proof registry backstop)
+    CI->>Registry: Validate receipts, architecture map, proof verdict
+    IDE-->>User: Return GOAL RESULT (PASS / PARTIAL / BLOCKED)
+    Note over User: Judge by proof receipts, not transcript
+```
+
+---
+
 ## Direction RALPH
 
 Used when the user changes product direction.
