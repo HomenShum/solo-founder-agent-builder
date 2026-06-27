@@ -1146,7 +1146,19 @@ eval/benchmark change:
   requires T1 + T2 + T4
 ```
 
-The output should be a research brief, not a list of links.
+The output should be a research brief, not a list of links. The brief must also act as a **design critic** — it must answer:
+
+```text
+1. Does the proposed design violate current SDK guidance?
+2. Is there a simpler official pattern?
+3. Should this be a hook, MCP server, subagent, tool, queue, or plain function?
+4. What trace should prove it worked?
+5. What eval catches the likely failure mode?
+6. Which architecture graph node changes?
+7. Which seductive idea are we rejecting?
+```
+
+Good systems thinking includes rejected options, not just chosen ones.
 
 ---
 

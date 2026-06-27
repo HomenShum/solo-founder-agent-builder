@@ -307,7 +307,12 @@ research brief before the build decision is treated as grounded:
 `npm run sfn -- research classify --title "<title>" --url <url> --domain <domain>` and
 `npm run sfn -- research brief --goal "<goal>" --domain <domain> --project .`, then verify with
 `npm run sfn -- research verify <brief.json>`. Product inspirations are only product references; they
-must be Adopt/Adapt/Park/Reject classified and cannot prove implementation quality. Doctrine:
+must be Adopt/Adapt/Park/Reject classified and cannot prove implementation quality. The brief must
+also act as a **design critic** and answer: (1) Does the proposed design violate current SDK guidance?
+(2) Is there a simpler official pattern? (3) Should this be a hook, MCP server, subagent, tool, queue,
+or plain function? (4) What trace should prove it worked? (5) What eval catches the likely failure
+mode? (6) Which architecture graph node changes? (7) Which seductive idea are we rejecting? Good
+systems thinking includes rejected options, not just chosen ones. Doctrine:
 [`references/research-governor.md`](references/research-governor.md); copyable implementation:
 [`templates/research/researchGovernor.ts`](templates/research/researchGovernor.ts).
 
